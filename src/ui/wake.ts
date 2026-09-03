@@ -104,10 +104,16 @@ function placeOnArc(node: SVGElement, u: number, opacity: number, scale: number)
   // rises in the east — but it reads with the direction of time, which is what
   // a child is actually parsing here.
   const a = u * Math.PI;
-  const x = 50 - 40 * Math.cos(a);            // % of the sky box
-  const y = 78 - 62 * Math.sin(a);
-  node.style.transform =
-    `translate3d(${(x - 50) * 4.1}%, ${(y - 14) * 4.1}%, 0) scale(${scale})`;
+
+  // The body is a 116 px box anchored at top:14%, left:50%, so its natural
+  // centre is ~26% down and centred horizontally. These constants convert a
+  // target position (as % of the panel) into a transform of the box itself —
+  // transform rather than top/left so the move stays on the compositor.
+  //   horizon (sin 0) → centre ~62% down      zenith (sin 1) → centre ~18% down
+  const x = 50 - 38 * Math.cos(a);            // 12% (left) … 88% (right)
+  const tx = (x - 50) * 4.14;
+  const ty = 149 - 182 * Math.sin(a);
+  node.style.transform = `translate3d(${tx}%, ${ty}%, 0) scale(${scale})`;
   node.style.opacity = String(clamp01(opacity));
 }
 function mixHex(a: string, b: string, t: number): string {
