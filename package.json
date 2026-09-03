@@ -1,0 +1,24 @@
+{
+  "name": "hjem",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Fast Home Assistant wall panels for Shelly Wall Display (MTK6580) and Wall Display XL (RK3566)",
+  "scripts": {
+    "build": "node tools/build.mjs",
+    "watch": "node tools/build.mjs --watch",
+    "dev": "node tools/build.mjs --watch & node tools/mock-ha.mjs",
+    "mock": "node tools/mock-ha.mjs",
+    "gen": "node tools/generate.mjs",
+    "discover": "node tools/discover.mjs",
+    "deploy": "node tools/deploy.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0",
+    "playwright": "^1.62.1",
+    "typescript": "^5.7.0",
+    "ws": "^8.18.0",
+    "yaml": "^2.7.0"
+  }
+}

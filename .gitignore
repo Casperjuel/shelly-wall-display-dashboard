@@ -1,0 +1,24 @@
+node_modules/
+hjemctl/target/
+public/hjem.js
+public/hjem.js.map
+ha-config/
+measurements.jsonl
+backup-*.json
+.DS_Store
+
+# panel credentials — contains a long-lived HA token
+public/panel-config.json
+
+# local device registry — MAC addresses and LAN IPs of *your* panels
+devices.json
+# personal session notes: credentials, network layout
+RESUME.md
+
+# your house — bootstrapped from rooms.example.yaml on first run
+rooms.yaml
+# everything below is generated from rooms.yaml by `npm run gen`
+src/generated/
+dashboards/generated/
+config/packages/
+public/rooms.json

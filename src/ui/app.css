@@ -1,0 +1,377 @@
+/* ── shell ─────────────────────────────────────────────────────────────── */
+.panel {
+  height: 100%;
+  display: grid;
+  grid-template-rows: 46px 1fr var(--tabbar-h, 64px);
+  background: transparent;   /* the accent wash on <body> shows through */
+}
+
+.hdr {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 14px;
+  /* hairline that fades out at the edges rather than a hard rule */
+  border-bottom: 1px solid transparent;
+  border-image: linear-gradient(90deg, transparent, var(--line) 18%, var(--line) 82%, transparent) 1;
+}
+.hdr-title { font-size: 17px; font-weight: 650; letter-spacing: -.01em; }
+.hdr-right { display: flex; align-items: center; gap: 10px; }
+.clock { font-size: 16px; font-weight: 600; color: var(--fg-dim); }
+
+.chips { display: flex; gap: 6px; }
+.chip {
+  display: flex; align-items: center; gap: 4px;
+  padding: 3px 8px; border-radius: 999px;
+  background: var(--accent-soft); color: var(--fg-dim);
+  border: 1px solid var(--line-soft);
+  font-size: 12px; font-weight: 600;
+}
+.chip-ic { display: flex; opacity: .75; }
+
+.panes { position: relative; overflow: hidden; }
+.pane {
+  position: absolute; inset: 0;
+  padding: 12px;
+  display: none;
+  flex-direction: column; gap: 10px;
+}
+.pane.show { display: flex; }
+/* Varme and Musik hold one tall tile each — centre it rather than stranding it
+   at the top above 200 px of empty panel. */
+.pane-varme.show, .pane-musik.show { justify-content: center; }
+
+.sect-lbl {
+  font-size: 11px; font-weight: 700; letter-spacing: .07em;
+  text-transform: uppercase; color: var(--fg-faint);
+  margin-top: 2px;
+}
+.empty {
+  margin: auto; color: var(--fg-faint); font-size: 14px; text-align: center;
+}
+
+/* ── tab bar ───────────────────────────────────────────────────────────── */
+.tabbar {
+  display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
+  border-top: 1px solid var(--line-soft);
+  background:
+    radial-gradient(60% 220% at 50% 100%, var(--accent-soft) 0%, rgba(0,0,0,0) 70%),
+    linear-gradient(180deg, var(--bg-tint) 0%, var(--surface-1) 100%);
+}
+.tab {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 3px; color: var(--fg-faint);
+  transition: color var(--t-move) var(--ease), transform var(--t-tap) var(--ease);
+}
+.tab.down { transform: scale(.92); }
+.tab-ic { display: flex; }
+.tab-lbl { font-size: 11px; font-weight: 600; }
+.tab.active { color: var(--fg); }
+.tab.active .tab-ic { color: var(--accent-text); }
+/* a short accent bar instead of a filled pill — quieter, and one static paint */
+.tab.active::before {
+  content: ''; position: absolute; top: 0; left: 50%;
+  width: 26px; height: 2px; margin-left: -13px; border-radius: 0 0 2px 2px;
+  background: var(--accent-text);
+}
+.tab { position: relative; }
+
+/* ── hjem: status tiles ─────────────────────────────────────────────────── */
+/* Each tile answers one question at a glance and taps through to its own tab.
+   The small button on a tile performs that domain's primary action in place. */
+
+.home-np {
+  position: relative; display: flex; align-items: center; gap: 12px;
+  min-height: 88px; padding: 14px 14px; border-radius: var(--r-lg);
+  background: var(--card-grad); border: 1px solid var(--line-soft);
+  overflow: hidden; cursor: pointer;
+  transition: transform var(--t-tap) var(--ease), border-color var(--t-move) var(--ease);
+}
+.home-np.down { transform: scale(.985); }
+.home-np.playing { border-color: var(--musik-dim); }
+.home-np-aura {
+  position: absolute; inset: 0; pointer-events: none; background-repeat: no-repeat;
+  opacity: 0; transition: opacity 400ms var(--ease);
+}
+.home-np.playing .home-np-aura { opacity: 1; }
+/* album art, when the source provides one */
+.home-np-art {
+  position: relative; flex: 0 0 auto;
+  width: 62px; height: 62px; border-radius: 12px; object-fit: cover;
+  display: none; box-shadow: 0 2px 10px rgba(0,0,0,.35);
+}
+.home-np-art.show { display: block; }
+.home-np-meta { position: relative; flex: 1; min-width: 0; }
+.home-np-title {
+  font-size: 17px; font-weight: 650; letter-spacing: -.01em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.home-np.playing .home-np-title { color: var(--musik); }
+.home-np:not(.playing) .home-np-title { color: var(--fg-dim); font-weight: 550; }
+.home-np-artist {
+  font-size: 13px; color: var(--fg-faint); margin-top: 1px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.home-np-btn {
+  position: relative; flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: center;
+  width: 52px; height: 52px; border-radius: 50%;
+  background: var(--musik-dim); color: var(--musik);
+  transition: transform var(--t-tap) var(--ease);
+}
+.home-np-btn.down { transform: scale(.9); }
+.home-np-btn.hidden { display: none; }
+
+.home-duo { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.home-stat {
+  position: relative; display: flex; flex-direction: column;
+  min-height: 92px; padding: 11px 12px 12px; border-radius: var(--r-lg);
+  background: var(--card-grad); border: 1px solid var(--line-soft);
+  cursor: pointer;
+  transition: transform var(--t-tap) var(--ease), border-color var(--t-move) var(--ease);
+}
+.home-stat.down { transform: scale(.97); }
+.home-stat-lbl {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11px; font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--fg-faint);
+}
+.home-stat-val {
+  font-size: 32px; font-weight: 280; letter-spacing: -.03em;
+  line-height: 1.1; margin-top: auto;
+}
+.home-stat-sub { font-size: 12px; font-weight: 600; color: var(--fg-faint); min-height: 15px; }
+
+.home-varme.heating { border-color: var(--varme-dim); }
+.home-varme.heating .home-stat-val,
+.home-varme.heating .home-stat-sub,
+.home-varme.heating .home-stat-lbl svg { color: var(--varme); }
+
+.home-lys.on { border-color: var(--accent-line); }
+.home-lys.on .home-stat-lbl svg { color: var(--accent-text); }
+.home-lys.on .home-stat-val { color: var(--accent-text); }
+.home-lys-btn {
+  position: absolute; top: 8px; right: 8px;
+  display: flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; border-radius: 12px;
+  background: var(--surface-3); color: var(--fg-faint);
+  transition: transform var(--t-tap) var(--ease), background var(--t-move) var(--ease), color var(--t-move) var(--ease);
+}
+.home-lys-btn.down { transform: scale(.88); }
+.home-lys-btn.on { background: var(--lys-dim); color: var(--accent-text); }
+
+/* ── scener ────────────────────────────────────────────────────────────── */
+.scene-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.scene-grid { flex: 1; align-content: start; }
+.scene-tile {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 4px; height: 62px; border-radius: var(--r-md);
+  /* mood gradient goes on background-image; this stays as the base colour */
+  background-color: var(--surface-1);
+  background-repeat: no-repeat;
+  border: 1px solid var(--line-soft);
+  color: var(--mood-ink, var(--fg-dim));
+  transition: transform var(--t-tap) var(--ease), border-color var(--t-move) var(--ease);
+}
+.scene-tile .scene-ic { color: var(--mood-ink, var(--fg-dim)); }
+.scene-tile.down { transform: scale(.94); border-color: var(--accent-line); }
+/* the scene the panel is currently reflecting */
+.scene-tile.active {
+  border-color: var(--mood-ink, var(--accent-line));
+  box-shadow: inset 0 0 0 1px var(--mood-ink, var(--accent-line));
+}
+.scene-tile.active .scene-name { color: var(--mood-ink, var(--fg)); }
+.scene-ic { display: flex; }
+.scene-name { font-size: 11px; font-weight: 600; text-align: center; line-height: 1.1;
+  color: var(--fg); }
+/* local acknowledgement — scenes report no state to confirm against */
+.scene-tile.flash { border-color: var(--mood-ink, var(--accent-line)); }
+
+/* ── lys ───────────────────────────────────────────────────────────────── */
+.light-tile {
+  position: relative;
+  border-radius: var(--r-md);
+  background: var(--card-grad);
+  border: 1px solid var(--line-soft); overflow: hidden;
+  transition: border-color var(--t-move) var(--ease);
+}
+.light-tile.on { border-color: var(--accent-line); }
+
+/* The bulb's own colour, as its own layer so changing it never touches the
+   tile's background, border or the text sitting above it. */
+.light-glow {
+  position: absolute; inset: 0; pointer-events: none;
+  transition: opacity var(--t-move) var(--ease);
+}
+.light-head, .slider { position: relative; }
+/* icon chip picks up the live bulb colour when one is known */
+.light-tile.on .light-ic { background: var(--lys-dim); color: var(--bulb-ink, var(--accent-text)); }
+.light-tile.on .light-sub { color: var(--bulb-ink, var(--accent-text)); }
+.light-head {
+  display: flex; align-items: center; gap: 11px; width: 100%;
+  padding: 11px 12px; text-align: left;
+  transition: transform var(--t-tap) var(--ease);
+}
+.light-head.down { transform: scale(.985); }
+.light-ic {
+  display: flex; align-items: center; justify-content: center;
+  width: 42px; height: 42px; border-radius: 12px; flex: 0 0 auto;
+  background: var(--surface-3); color: var(--fg-faint);
+  transition: background var(--t-move) var(--ease), color var(--t-move) var(--ease);
+}
+.light-meta { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
+.light-name { font-size: 15px; font-weight: 600; }
+.light-sub { font-size: 12px; color: var(--fg-faint); }
+.light-tile.unavailable { opacity: .45; }
+
+/* pulses while an optimistic value is unconfirmed — honest about uncertainty
+   without the UI ever feeling like it's waiting */
+.pending-dot {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--fg-faint);
+  opacity: 0; transition: opacity var(--t-move) var(--ease); flex: 0 0 auto;
+}
+.pending-dot.show { opacity: 1; animation: pulse 1s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .25; } }
+
+/* ── sliders ───────────────────────────────────────────────────────────── */
+.slider {
+  position: relative; height: 44px; margin: 0 10px 10px;
+  border-radius: var(--r-sm); background: var(--surface-3);
+  overflow: hidden; cursor: pointer;
+}
+/* The fill is a SOLID colour, deliberately. It is scaled with transform every
+   frame during a drag; a gradient under transform gets re-rasterised on each
+   step, which is exactly the kind of work Mali-400 cannot absorb. */
+.slider-fill {
+  position: absolute; inset: 0;
+  /* the bulb's own colour, so the bar reads as "how much of THIS light" */
+  background: var(--bulb-ink, var(--lys));
+  transform-origin: left center;
+  transform: scaleX(0);
+  /* no transition while dragging — the rAF paint IS the animation */
+  will-change: transform;
+}
+.slider.dragging .slider-fill { transition: none; }
+.slider-knob { display: none; }
+.slider-vol { height: 36px; margin: 0; flex: 1; }
+.slider-vol .slider-fill { background: var(--musik); }
+
+/* ── varme ─────────────────────────────────────────────────────────────── */
+.climate-tile { display: flex; flex-direction: column; align-items: center; gap: 2px; padding-top: 4px; }
+.climate-now { display: flex; align-items: baseline; }
+.climate-now-val { font-size: 64px; font-weight: 250; letter-spacing: -.04em; line-height: 1; }
+.climate-now-unit { font-size: 26px; font-weight: 300; color: var(--fg-dim); }
+.climate-now-lbl {
+  font-size: 11px; font-weight: 700; letter-spacing: .07em;
+  text-transform: uppercase; color: var(--fg-faint);
+}
+.climate-tile.heating .climate-now-val { color: var(--varme); }
+.climate-tile.off { opacity: .5; }
+
+.stepper { display: flex; align-items: center; gap: 14px; margin-top: 10px; }
+.step {
+  display: flex; align-items: center; justify-content: center;
+  width: var(--touch); height: var(--touch); border-radius: 50%;
+  background: var(--surface-2); color: var(--fg);
+  transition: transform var(--t-tap) var(--ease), background var(--t-move) var(--ease);
+}
+.step.down { transform: scale(.9); background: var(--varme-dim); color: var(--varme); }
+.set-val { font-size: 22px; font-weight: 600; min-width: 62px; text-align: center; }
+.climate-status { font-size: 12px; color: var(--fg-dim); margin-top: 8px; }
+
+.preset-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 100%; margin-top: 10px; }
+.preset {
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  padding: 9px 0; border-radius: var(--r-md);
+  background: var(--card-grad); border: 1px solid var(--line-soft); color: var(--fg-dim);
+  font-size: 13px; font-weight: 600;
+  transition: transform var(--t-tap) var(--ease), background var(--t-move) var(--ease), color var(--t-move) var(--ease);
+}
+.preset small { font-size: 11px; color: var(--fg-faint); font-weight: 500; }
+.preset.down { transform: scale(.95); }
+.preset.active { background: var(--varme-dim); color: var(--varme); border-color: transparent; }
+.preset.active small { color: var(--varme); }
+
+/* ── musik ─────────────────────────────────────────────────────────────── */
+.media-tile {
+  position: relative; display: flex; flex-direction: column; gap: 16px;
+  border-radius: var(--r-lg); padding: 18px 16px;
+  background: var(--card-grad);
+  border: 1px solid var(--line-soft);
+  transition: border-color var(--t-move) var(--ease);
+}
+.media-tile.playing { border-color: var(--musik-dim); }
+/* soft "aura" blobs while something is playing — three radial falloffs, no
+   filter, because Mali-400 has no GPU path for blur */
+.media-aura {
+  position: absolute; inset: 0; border-radius: var(--r-lg); pointer-events: none;
+  background-repeat: no-repeat;
+  opacity: 0; transition: opacity 400ms var(--ease);
+}
+.media-tile.playing .media-aura { opacity: 1; }
+.np, .transport, .vol-row, .fav-row { position: relative; }
+.np { position: relative; display: flex; align-items: center; gap: 14px; min-height: 74px; }
+.np-art {
+  width: 74px; height: 74px; border-radius: 14px; object-fit: cover;
+  flex: 0 0 auto; display: none; box-shadow: 0 3px 14px rgba(0,0,0,.4);
+}
+.np-art.show { display: block; }
+.np-text { flex: 1; min-width: 0; }
+.np-title {
+  font-size: 19px; font-weight: 600; letter-spacing: -.01em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.np-artist {
+  font-size: 13px; color: var(--fg-dim);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.media-tile.idle .np-title { color: var(--fg-faint); font-weight: 500; }
+.media-tile.playing .np-title { color: var(--musik); }
+
+.transport { display: flex; align-items: center; justify-content: center; gap: 20px; }
+.tbtn {
+  display: flex; align-items: center; justify-content: center;
+  width: 52px; height: 52px; border-radius: 50%;
+  background: var(--card-grad); border: 1px solid var(--line-soft); color: var(--fg);
+  transition: transform var(--t-tap) var(--ease), background var(--t-move) var(--ease);
+}
+.tbtn.down { transform: scale(.9); }
+.tbtn-main { width: 64px; height: 64px; background: var(--musik-dim); border-color: transparent; color: var(--musik); }
+
+.vol-row { display: flex; align-items: center; gap: 10px; }
+.vol-ic {
+  display: flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; border-radius: 10px;
+  background: var(--surface-2); color: var(--fg-dim); flex: 0 0 auto;
+  transition: transform var(--t-tap) var(--ease);
+}
+.vol-ic.down { transform: scale(.9); }
+.vol-val { font-size: 13px; color: var(--fg-dim); min-width: 26px; text-align: right; }
+
+.fav-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; }
+.fav {
+  padding: 10px 15px; border-radius: 999px; flex: 0 0 auto;
+  background: var(--surface-2); border: 1px solid var(--line-soft); color: var(--fg-dim);
+  font-size: 13px; font-weight: 600;
+  transition: transform var(--t-tap) var(--ease), background var(--t-move) var(--ease);
+}
+.fav.down { transform: scale(.93); background: var(--musik-dim); color: var(--musik); }
+
+/* ── connection veil ───────────────────────────────────────────────────── */
+.veil-box {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  color: var(--fg-dim); font-size: 13px;
+}
+.veil-box svg { color: var(--danger); }
+
+/* ── token setup ───────────────────────────────────────────────────────── */
+.setup { padding: 20px; display: flex; flex-direction: column; gap: 12px; height: 100%; justify-content: center; }
+.setup h1 { font-size: 18px; font-weight: 650; }
+.setup p { font-size: 13px; color: var(--fg-dim); line-height: 1.45; }
+.setup input {
+  padding: 13px; border-radius: var(--r-md); border: 1px solid var(--line);
+  background: var(--surface-1); color: var(--fg); font: inherit; font-size: 13px;
+  -webkit-user-select: text; user-select: text;
+}
+.setup button {
+  padding: 14px; border-radius: var(--r-md);
+  background: var(--lys); color: #201800; font-weight: 700;
+}

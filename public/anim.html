@@ -1,0 +1,145 @@
+<!doctype html><html lang="da"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>hjem · animationstest</title>
+<link rel="icon" href="data:,">
+<style>
+*{box-sizing:border-box;margin:0;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:#0b0d10;color:#eef1f5;
+  font:13px/1.3 system-ui,sans-serif;-webkit-user-select:none;user-select:none}
+body{display:grid;grid-template-rows:auto 1fr auto;padding:8px;gap:8px}
+h1{font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#7b8798}
+#stage{position:relative;overflow:hidden;border-radius:12px;background:#14181e;
+  display:flex;align-items:center;justify-content:center}
+#gif{max-width:100%;max-height:100%;display:none}
+/* transform-only CSS animation — the kind we actually ship */
+#box{position:absolute;width:56px;height:56px;border-radius:14px;
+  background:linear-gradient(135deg,#f5b73d,#ff6b4a);display:none;
+  animation:orbit 3s linear infinite;will-change:transform}
+@keyframes orbit{
+  0%{transform:translate(-110px,-70px) rotate(0deg)}
+  25%{transform:translate(110px,-70px) rotate(90deg)}
+  50%{transform:translate(110px,70px) rotate(180deg)}
+  75%{transform:translate(-110px,70px) rotate(270deg)}
+  100%{transform:translate(-110px,-70px) rotate(360deg)}
+}
+/* animated gradient — repaints every frame, does NOT composite. This is the
+   case the GIF result does not cover. */
+#grad{position:absolute;inset:0;display:none;
+  background:linear-gradient(120deg,#f5b73d,#ff4e88,#4c8dff,#2bd4a0,#f5b73d);
+  background-size:400% 400%;animation:slide 8s ease infinite}
+@keyframes slide{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+/* many small gradient tiles — closer to what a dashboard actually renders */
+#tiles{position:absolute;inset:0;display:none;grid-template-columns:repeat(3,1fr);
+  grid-template-rows:repeat(4,1fr);gap:6px;padding:6px}
+#tiles div{border-radius:10px;background-size:300% 300%;animation:slide 6s ease infinite}
+/* SVG, three ways — they behave very differently */
+#svgWrap{position:absolute;inset:0;display:none;align-items:center;justify-content:center}
+#svgWrap svg{width:70%;height:70%}
+/* 1. CSS transform on an SVG node — composited, should be free */
+.spin{transform-origin:50% 50%;animation:spin 3s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* 2. stroke-dashoffset — repaints the path every frame (progress rings) */
+.dash{animation:dash 2.5s linear infinite}
+@keyframes dash{to{stroke-dashoffset:0}}
+/* 3. a grid of many animated SVG icons — closest to a real dashboard */
+#svgMany{position:absolute;inset:0;display:none;grid-template-columns:repeat(4,1fr);
+  grid-template-rows:repeat(4,1fr);gap:8px;padding:8px;place-items:center}
+#svgMany svg{width:70%;height:70%}
+/* deliberately expensive: the things we banned from the real dashboard */
+#box.heavy{filter:blur(6px) saturate(2);box-shadow:0 0 40px 10px rgba(245,183,61,.6)}
+#hud{display:flex;gap:6px;align-items:baseline;font-variant-numeric:tabular-nums}
+#fps{font-size:30px;font-weight:700;letter-spacing:-.02em}
+#fps.good{color:#4fd08a}#fps.mid{color:#f5b73d}#fps.bad{color:#ff5c5c}
+#hud small{color:#7b8798}
+.row{display:grid;grid-template-columns:repeat(6,1fr);gap:3px}
+button{font-size:9px!important;padding:11px 1px!important}
+button{padding:11px 4px;border:1px solid #262e39;border-radius:10px;background:#1a1f27;
+  color:#eef1f5;font:600 11px system-ui}
+button.on{background:#1a6ef5;border-color:#1a6ef5}
+</style></head><body>
+<h1>animationstest <span id="dims" style="color:#4a5462;font-weight:500;text-transform:none"></span></h1>
+<div id="stage"><img id="gif" src="200.gif" alt=""><div id="box"></div>
+  <div id="grad"></div><div id="tiles"></div>
+  <div id="svgWrap">
+    <svg viewBox="0 0 100 100" fill="none" stroke="#f5b73d" stroke-width="6" stroke-linecap="round">
+      <circle class="spin" cx="50" cy="50" r="38" stroke-dasharray="60 180"/>
+      <circle class="dash" cx="50" cy="50" r="26" stroke="#4fd08a"
+              stroke-dasharray="163" stroke-dashoffset="163"/>
+      <circle class="spin" cx="50" cy="50" r="14" stroke="#ff6b4a" stroke-dasharray="30 60"
+              style="animation-duration:1.5s;animation-direction:reverse"/>
+    </svg>
+  </div>
+  <div id="svgMany"></div></div>
+<div>
+  <div id="hud"><span id="fps" class="good">–</span><small>fps</small>
+    <small id="min" style="margin-left:auto"></small></div>
+  <div class="row" style="margin-top:6px">
+    <button id="bGif">GIF</button>
+    <button id="bCss">CSS</button>
+    <button id="bHeavy">BLUR</button>
+    <button id="bGrad">GRAD</button>
+    <button id="bSvg">SVG</button>
+    <button id="bSvgN">16 SVG</button>
+  </div>
+</div>
+<script>
+var grad=document.getElementById('grad'), tiles=document.getElementById('tiles');
+var HUES=['#f5b73d,#ff4e88','#4c8dff,#2bd4a0','#ff6b4a,#a87bff','#34b8d8,#45cdb0',
+          '#e85a82,#f59e2c','#3fc77f,#4c8dff'];
+for(var i=0;i<12;i++){var d=document.createElement('div');
+  d.style.backgroundImage='linear-gradient(135deg,'+HUES[i%6]+')';tiles.appendChild(d);}
+var svgWrap=document.getElementById('svgWrap'), svgMany=document.getElementById('svgMany');
+var SVG_ICON='<svg viewBox="0 0 100 100" fill="none" stroke-width="8" stroke-linecap="round">'+
+  '<circle class="spin" cx="50" cy="50" r="34" stroke="COL" stroke-dasharray="55 160"/>'+
+  '<circle class="dash" cx="50" cy="50" r="18" stroke="COL2" stroke-dasharray="113" stroke-dashoffset="113"/></svg>';
+var COLS=['#f5b73d','#4fd08a','#4c8dff','#ff6b4a','#a87bff','#34b8d8'];
+for(var k=0;k<16;k++){var w=document.createElement('div');
+  w.innerHTML=SVG_ICON.replace(/COL2/g,COLS[(k+3)%6]).replace(/COL/g,COLS[k%6]);
+  svgMany.appendChild(w.firstChild);}
+var gif=document.getElementById('gif'), box=document.getElementById('box'),
+    fpsEl=document.getElementById('fps'), minEl=document.getElementById('min');
+document.getElementById('dims').textContent =
+  innerWidth+'×'+innerHeight+' @'+devicePixelRatio;
+
+var n=0,t0=performance.now(),lo=999,samples=[];
+(function loop(){
+  n++; var d=performance.now()-t0;
+  if(d>=500){
+    var f=Math.round(n*1000/d);
+    samples.push(f); if(samples.length>40) samples.shift();
+    if(samples.length>4) lo=Math.min.apply(null,samples.slice(4));
+    fpsEl.textContent=f;
+    fpsEl.className = f>=50?'good':f>=30?'mid':'bad';
+    minEl.textContent='min '+(lo===999?'–':lo);
+    n=0; t0=performance.now();
+  }
+  requestAnimationFrame(loop);
+})();
+
+function reset(){samples=[];lo=999;}
+function set(g,c,h,gr,ti,sv,sn){
+  svgWrap.style.display=sv?'flex':'none';
+  svgMany.style.display=sn?'grid':'none';
+  gif.style.display=g?'block':'none';
+  box.style.display=c?'block':'none';
+  box.classList.toggle('heavy',!!h);
+  grad.style.display=gr?'block':'none';
+  tiles.style.display=ti?'grid':'none';
+  reset();
+}
+function bind(id,fn){var b=document.getElementById(id);
+  b.addEventListener('pointerdown',function(){
+    [].forEach.call(document.querySelectorAll('button'),function(x){x.classList.remove('on')});
+    b.classList.add('on'); fn();},{passive:true});}
+bind('bGif',  function(){set(1,0,0,0,0,0,0)});
+bind('bCss',  function(){set(0,1,0,0,0,0,0)});
+bind('bHeavy',function(){set(0,1,1,0,0,0,0)});
+bind('bGrad', function(){set(0,0,0,1,0,0,0)});
+bind('bSvg',  function(){set(0,0,0,0,0,1,0)});
+bind('bSvgN', function(){set(0,0,0,0,0,0,1)});
+set(0,0,0,0,0,1,0); document.getElementById('bSvg').classList.add('on');
+
+/* dev channel: lets the server switch what this panel is showing */
+try { new EventSource('/__reload').onmessage = function(){ location.reload(); }; } catch(e){}
+</script></body></html>

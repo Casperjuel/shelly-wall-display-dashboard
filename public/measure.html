@@ -1,0 +1,86 @@
+<!doctype html><html lang="da"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>hjem · mål skærm</title>
+<link rel="icon" href="data:,">
+<style>
+  *{box-sizing:border-box;margin:0;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;background:#0b0d10;color:#e8eaed;font:14px/1.4 system-ui,sans-serif}
+  body{display:flex;flex-direction:column;padding:10px;gap:8px}
+  h1{font-size:15px;font-weight:600;color:#8b93a1}
+  table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+  td{padding:3px 0;border-bottom:1px solid #1c2027}
+  td:first-child{color:#8b93a1}
+  td:last-child{text-align:right;font-weight:600}
+  #fps{font-size:34px;font-weight:700;letter-spacing:-.02em}
+  #fps small{font-size:13px;font-weight:400;color:#8b93a1}
+  .pad{flex:1;min-height:70px;border:1px dashed #2a3039;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#8b93a1;font-size:12px}
+  .pad.hit{background:#1a6ef5;color:#fff;border-color:#1a6ef5}
+  #lat{font-weight:700}
+  button{width:100%;padding:11px;border:0;border-radius:10px;background:#1a6ef5;color:#fff;font:600 14px system-ui;touch-action:manipulation}
+</style></head><body>
+<h1>hjem · skærmmåling</h1>
+<table id="t"></table>
+<div id="fps">–<small> fps</small></div>
+<div class="pad" id="pad">TRYK HER — måler touch-forsinkelse</div>
+<div>Touch→maling: <span id="lat">–</span></div>
+<button id="copy">Send resultat</button>
+<script>
+var rows=[
+ ['CSS viewport', innerWidth+' x '+innerHeight],
+ ['devicePixelRatio', String(devicePixelRatio)],
+ ['Fysiske px', Math.round(innerWidth*devicePixelRatio)+' x '+Math.round(innerHeight*devicePixelRatio)],
+ ['screen', screen.width+' x '+screen.height],
+ ['Kerner', String(navigator.hardwareConcurrency||'?')],
+ ['RAM (GB)', String(navigator.deviceMemory||'?')],
+ ['Touch-punkter', String(navigator.maxTouchPoints)],
+ ['UA', navigator.userAgent]
+];
+document.getElementById('t').innerHTML=rows.map(function(r){
+  return '<tr><td>'+r[0]+'</td><td>'+r[1]+'</td></tr>';}).join('');
+
+// sustained FPS under a cheap transform load
+var n=0,t0=performance.now(),fpsEl=document.getElementById('fps'),best=0,lastFps=0;
+(function loop(){n++;var d=performance.now()-t0;
+ if(d>=1000){var f=Math.round(n*1000/d);best=Math.max(best,f);lastFps=f;
+  fpsEl.innerHTML=f+'<small> fps (top '+best+')</small>';n=0;t0=performance.now();}
+ requestAnimationFrame(loop);})();
+
+// pointerdown -> next paint. this is the number that matters.
+var pad=document.getElementById('pad'),lat=document.getElementById('lat'),samples=[];
+pad.addEventListener('pointerdown',function(){
+  var t=performance.now();pad.classList.add('hit');
+  requestAnimationFrame(function(){requestAnimationFrame(function(){
+    var ms=performance.now()-t;samples.push(ms);
+    var avg=samples.reduce(function(a,b){return a+b},0)/samples.length;
+    lat.textContent=ms.toFixed(1)+' ms (snit '+avg.toFixed(1)+' over '+samples.length+')';
+  });});
+},{passive:true});
+['pointerup','pointercancel','pointerleave'].forEach(function(e){
+  pad.addEventListener(e,function(){pad.classList.remove('hit')},{passive:true});});
+
+// Send results back to the dev machine. Clipboard APIs are unreliable in an
+// Android WebView and retyping numbers off a 4" screen is worse, so the panel
+// just POSTs what it measured.
+var sendBtn=document.getElementById('copy');
+function payload(){
+  var cur=0,avg=null;
+  if(samples.length){avg=+(samples.reduce(function(a,b){return a+b},0)/samples.length).toFixed(1);}
+  return {innerWidth:innerWidth,innerHeight:innerHeight,dpr:devicePixelRatio,
+    screenW:screen.width,screenH:screen.height,
+    cores:navigator.hardwareConcurrency||null,ram:navigator.deviceMemory||null,
+    touchPoints:navigator.maxTouchPoints,ua:navigator.userAgent,
+    fps:lastFps,fpsPeak:best,touchAvg:avg,touchN:samples.length,
+    touchSamples:samples.map(function(v){return +v.toFixed(1)})};
+}
+function send(auto){
+  return fetch('/__measure',{method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify(payload())}).then(function(){
+      sendBtn.textContent=auto?'Sendt automatisk ✓':'Sendt ✓';
+      setTimeout(function(){sendBtn.textContent='Send resultat igen'},2000);
+    }).catch(function(e){ sendBtn.textContent='Kunne ikke sende'; });
+}
+sendBtn.textContent='Send resultat';
+sendBtn.onclick=function(){send(false)};
+// auto-report after 12 s so it works even if nobody presses anything
+setTimeout(function(){send(true)},12000);
+</script></body></html>

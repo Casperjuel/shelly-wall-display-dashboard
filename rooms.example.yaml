@@ -1,0 +1,290 @@
+# ─────────────────────────────────────────────────────────────────────────────
+#  EXAMPLE MANIFEST
+#
+#  Copy this to `rooms.yaml` and make it yours — `npm run gen` does that for you
+#  on first run. Your own rooms.yaml is gitignored, so your house stays out of
+#  version control.
+#
+#  Room names here are generic. Replace slugs, names, accents and entity ids
+#  with your own; everything else in the repo derives from this one file.
+# ─────────────────────────────────────────────────────────────────────────────
+
+meta:
+  locale: da-DK
+  timezone: Europe/Copenhagen
+  # Long-lived access token lives in .env / on-device, never in this file.
+  ha_url: "http://homeassistant.local:8123"
+
+# ── Hardware ────────────────────────────────────────────────────────────────
+# wd  = Shelly Wall Display (Shelly_WallD_BLU_HT_Black)
+#       MTK6580 · quad Cortex-A7 ARMv7 · Mali-400 MP2 · 1 GB RAM · 4" square
+#       >>> the performance floor. Design for this device first. <<<
+# xl  = Shelly Wall Display XL
+#       Rockchip RK3566 · quad Cortex-A55 1.8 GHz · Mali-G52 · 2 GB · 10.1"
+models:
+  wd:
+    label: "Shelly Wall Display"
+    soc: MTK6580
+    # VERIFY ON DEVICE: open /measure.html on the panel and paste results here.
+    canvas: { w: 480, h: 480, dpr: 1 }
+    shell: tabs          # 4 bottom tabs, one room
+    budget:
+      max_dom_nodes: 900
+      max_bundle_gz_kb: 32   # enforced by tools/build.mjs (raised after measuring the device)
+      no_blur: true      # Mali-400: backdrop-filter is a frame-killer
+      no_photos: true    # 1 GB RAM: no full-screen JPEGs
+  xl:
+    label: "Shelly Wall Display XL"
+    soc: RK3566
+    canvas: { w: 1280, h: 752, dpr: 1 }
+    shell: overview      # whole-house grid, all rooms at once
+    budget:
+      max_dom_nodes: 2500
+      max_bundle_gz_kb: 32
+      no_blur: true
+      no_photos: true
+
+# ── Integrations in play ────────────────────────────────────────────────────
+integrations:
+  hue:    { domain: light,        note: "Philips Hue bulb in every room" }
+  shelly: { domain: light,        note: "Shelly Pro relay — lamp outlet (lampeudtag)" }
+  wavin:  { domain: climate,      note: "Wavin Sentio/AHC9000 floor heating, one zone per room" }
+  sonos:  { domain: media_player, note: "Sonos speaker in every room" }
+
+# ── Rooms ───────────────────────────────────────────────────────────────────
+# `?` suffix on an entity = unverified guess, will be resolved by `npm run discover`.
+rooms:
+  - slug: kokken
+    accent: "#F59E2C"   # vivid messing — køkkenets kobber
+    name: "Køkken"
+    icon: kitchen
+    display: xl
+    order: 1
+    entities:
+      lights:
+        - { entity: "light.kokken_hue?",        name: "Loft",     kind: hue }
+        - { entity: "light.kokken_lampeudtag?", name: "Bordlampe", kind: shelly }
+      climate: "climate.kokken?"
+      media:   "media_player.kokken?"
+      temperature: "sensor.kokken_temperatur?"
+      humidity:    "sensor.kokken_luftfugtighed?"
+
+  - slug: stue
+    accent: "#FF6B4A"   # koral — aftenlys og hygge
+    name: "Stue"
+    icon: sofa
+    display: wd
+    order: 2
+    entities:
+      lights:
+        - { entity: "light.stue_hue?",        name: "Hue",       kind: hue }
+        - { entity: "light.stue_lampeudtag?", name: "Lampeudtag", kind: shelly }
+      climate: "climate.stue?"
+      media:   "media_player.stue?"
+      temperature: "sensor.stue_temperatur?"
+      humidity:    "sensor.stue_luftfugtighed?"
+
+  - slug: spisestue
+    accent: "#E85A82"   # rosé — bordets varme
+    name: "Spisestue"
+    icon: dining
+    display: wd
+    order: 3
+    entities:
+      lights:
+        - { entity: "light.spisestue_hue?",        name: "Hue",        kind: hue }
+        - { entity: "light.spisestue_lampeudtag?", name: "Lampeudtag", kind: shelly }
+      climate: "climate.spisestue?"
+      media:   "media_player.spisestue?"
+      temperature: "sensor.spisestue_temperatur?"
+      humidity:    "sensor.spisestue_luftfugtighed?"
+
+  - slug: kontor
+    accent: "#4C8DFF"   # klar blå — koncentration
+    name: "Kontor"
+    icon: desk
+    display: wd
+    order: 4
+    entities:
+      lights:
+        - { entity: "light.kontor_hue?",        name: "Hue",        kind: hue }
+        - { entity: "light.kontor_lampeudtag?", name: "Lampeudtag", kind: shelly }
+      climate: "climate.kontor?"
+      media:   "media_player.kontor?"
+      temperature: "sensor.kontor_temperatur?"
+      humidity:    "sensor.kontor_luftfugtighed?"
+
+  - slug: sovevaerelse
+    accent: "#A87BFF"   # violet — ro
+    name: "Soveværelse"
+    icon: bed
+    display: wd
+    order: 5
+    entities:
+      lights:
+        - { entity: "light.sovevaerelse_hue?",        name: "Hue",        kind: hue }
+        - { entity: "light.sovevaerelse_lampeudtag?", name: "Lampeudtag", kind: shelly }
+      climate: "climate.sovevaerelse?"
+      media:   "media_player.sovevaerelse?"
+      temperature: "sensor.sovevaerelse_temperatur?"
+      humidity:    "sensor.sovevaerelse_luftfugtighed?"
+
+  - slug: barn_1
+    # ── Vågeur (sleep clock) ────────────────────────────────────────────────
+    # A moon-to-sun timer a child can read without reading. The panel takes
+    # over the screen at bedtime, dims right down, and only shows the sun when
+    # it is genuinely OK to get up.
+    wake:
+      enabled: true
+      sleep_at: "19:30"     # night starts — screen dims, moon appears
+      wake_at:  "07:00"     # sun is fully up; allowed out of bed
+      dawn_minutes: 90      # sunrise starts 05:30 and brightens until 07:00
+      morning_minutes: 90   # how long the sun stays before the normal dashboard
+      night_brightness: 4   # % — bright enough to see, dim enough to sleep by
+      dawn_brightness: 35   # % at the end of the sunrise, before the sun is up
+      # Optional HA overrides. If these entities exist they win, so a parent can
+      # move tomorrow's wake time from their phone or set a weekend schedule —
+      # but the panel still works on its own when HA is down.
+      wake_entity: "input_datetime.<slug>_vaagetid"
+      enabled_entity: "input_boolean.<slug>_vaageur"
+      day_brightness: 70
+    accent: "#3FC77F"   # skovgrøn
+    name: "Barn 1"
+    short: "Barn 1"
+    icon: child
+    display: wd
+    order: 6
+    entities:
+      lights:
+        - { entity: "light.barn_1_hue?",        name: "Hue",        kind: hue }
+        - { entity: "light.barn_1_lampeudtag?", name: "Lampeudtag", kind: shelly }
+      climate: "climate.barn_1?"
+      media:   "media_player.barn_1?"
+      temperature: "sensor.barn_1_temperatur?"
+      humidity:    "sensor.barn_1_luftfugtighed?"
+
+  - slug: barn_2
+    # ── Vågeur (sleep clock) ────────────────────────────────────────────────
+    # A moon-to-sun timer a child can read without reading. The panel takes
+    # over the screen at bedtime, dims right down, and only shows the sun when
+    # it is genuinely OK to get up.
+    wake:
+      enabled: true
+      sleep_at: "19:30"     # night starts — screen dims, moon appears
+      wake_at:  "07:00"     # sun is fully up; allowed out of bed
+      dawn_minutes: 90      # sunrise starts 05:30 and brightens until 07:00
+      morning_minutes: 90   # how long the sun stays before the normal dashboard
+      night_brightness: 4   # % — bright enough to see, dim enough to sleep by
+      dawn_brightness: 35   # % at the end of the sunrise, before the sun is up
+      # Optional HA overrides. If these entities exist they win, so a parent can
+      # move tomorrow's wake time from their phone or set a weekend schedule —
+      # but the panel still works on its own when HA is down.
+      wake_entity: "input_datetime.<slug>_vaagetid"
+      enabled_entity: "input_boolean.<slug>_vaageur"
+      day_brightness: 70
+    accent: "#FF9F45"   # orange
+    name: "Barn 2"
+    short: "Barn 2"
+    icon: child
+    display: wd
+    order: 7
+    entities:
+      lights:
+        - { entity: "light.barn_2_hue?",        name: "Hue",        kind: hue }
+        - { entity: "light.barn_2_lampeudtag?", name: "Lampeudtag", kind: shelly }
+      climate: "climate.barn_2?"
+      media:   "media_player.barn_2?"
+      temperature: "sensor.barn_2_temperatur?"
+      humidity:    "sensor.barn_2_luftfugtighed?"
+
+  - slug: badevaerelse
+    accent: "#34B8D8"   # cyan — vand
+    name: "Badeværelse"
+    icon: bath
+    display: wd
+    order: 8
+    entities:
+      lights:
+        - { entity: "light.badevaerelse_hue?",        name: "Hue",        kind: hue }
+        - { entity: "light.badevaerelse_lampeudtag?", name: "Lampeudtag", kind: shelly }
+      climate: "climate.badevaerelse?"
+      media:   "media_player.badevaerelse?"
+      temperature: "sensor.badevaerelse_temperatur?"
+      humidity:    "sensor.badevaerelse_luftfugtighed?"
+
+  - slug: gaestetoilet
+    accent: "#45CDB0"   # turkis — vand
+    name: "Gæstetoilet"
+    icon: bath
+    display: wd
+    order: 9
+    entities:
+      lights:
+        - { entity: "light.gaestetoilet_hue?",        name: "Hue",        kind: hue }
+        - { entity: "light.gaestetoilet_lampeudtag?", name: "Lampeudtag", kind: shelly }
+      climate: "climate.gaestetoilet?"
+      media:   "media_player.gaestetoilet?"
+      temperature: "sensor.gaestetoilet_temperatur?"
+      humidity:    "sensor.gaestetoilet_luftfugtighed?"
+
+# ── Tema ────────────────────────────────────────────────────────────────────
+# The panels follow the sun rather than a fixed clock: `sun.sun` already knows
+# sunrise/sunset for your latitude, which in Denmark swings by ~7 hours across
+# the year. A fixed 07–20 rule would have the bedroom panel glaring white at
+# 07:00 in December and dark at 21:00 in June.
+theme:
+  mode: sun            # sun | time | dark | light
+  sun_entity: "sun.sun"
+  # used only when mode: time, or when sun.sun is unavailable
+  light_from: "07:00"
+  light_to: "21:00"
+  # Ease into the change so a panel on the wall never *snaps* while you look at
+  # it. Long, because this happens twice a day and should be imperceptible.
+  transition_ms: 1200
+
+# ── Scenes ──────────────────────────────────────────────────────────────────
+# Shown on every panel's Scener tab. `scope: room` renders a per-room variant
+# (scene.<slug>_<id>); `scope: house` is a single global scene.
+scenes:
+  # `mood` is what the scene LOOKS like, and it drives the tile's gradient:
+  #   k     colour temperature in kelvin (2000 = candle, 6500 = overcast daylight)
+  #   hex   explicit primary colour, overrides k
+  #   hue2  a SECOND colour blended in from the opposite corner. This is what
+  #         stops a tile being one flat tone — real light in a room is never a
+  #         single hue, and two pools reading against each other is most of
+  #         what makes these tiles look alive.
+  #   level 0–1 overall brightness — a dark scene renders as a dark tile
+  # Set these to match what the scene actually does in HA and the panel becomes
+  # readable at a glance: you pick a scene by its swatch, not by its label.
+  - { id: aften,       name: "Aften",       icon: sunset,  scope: room,
+      mood: { k: 2300, hue2: "#FF3D77", level: 0.62 } }      # solnedgang: rav + rosa
+  - { id: hygge,       name: "Hygge",       icon: flame,   scope: room,
+      mood: { k: 1900, hue2: "#E0342B", level: 0.38 } }      # levende lys + glød
+  - { id: laesning,    name: "Læsning",     icon: book,    scope: room,
+      mood: { k: 4300, hue2: "#4C8DFF", level: 0.88 } }      # neutralt + kølig blå
+  - { id: rengoring,   name: "Rengøring",   icon: sparkle, scope: room,
+      mood: { k: 6000, hue2: "#37D9E8", level: 1.00 } }      # dagslys + cyan
+  - { id: godnat,      name: "Godnat",      icon: moon,    scope: house,
+      mood: { hex: "#3B2A8C", hue2: "#C24A6E", level: 0.22 } } # nat: indigo + dyb rosa
+  - { id: alt_slukket, name: "Alt slukket", icon: power,   scope: house,
+      mood: { k: 2700, level: 0.05 } }                        # næsten intet
+
+# Colours for the now-playing "aura" on the Musik tab. Three soft blobs.
+sonos_aura: ["#2BD4A0", "#3C8FFF", "#C766FF"]
+
+# ── Sonos favourites shown as one-tap buttons on the Musik tab ──────────────
+sonos_favourites:
+  - { name: "P3",        source: "DR P3" }
+  - { name: "P4",        source: "DR P4 København" }
+  - { name: "Nova",      source: "Radio Nova" }
+  - { name: "Playlist",  source: "Favoritter" }
+
+# ── Heating presets (Wavin) ────────────────────────────────────────────────
+heating:
+  min: 15
+  max: 26
+  step: 0.5
+  presets:
+    - { name: "Nat",   temp: 18 }
+    - { name: "Hjemme",temp: 21 }
+    - { name: "Varmt", temp: 23 }

@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "hjem": {
+      "command": "hjemctl",
+      "args": ["mcp"],
+      "env": {}
+    }
+  }
+}

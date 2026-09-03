@@ -1,0 +1,127 @@
+/* ── XL whole-house overview ───────────────────────────────────────────── */
+.ov {
+  height: 100%;
+  display: grid;
+  grid-template-rows: 56px 1fr 104px;
+  gap: 12px;
+  padding: 0 20px 16px;
+  position: relative;
+  min-height: 0;
+}
+.ov-hdr { display: flex; align-items: center; justify-content: space-between; }
+.ov-title { font-size: 22px; font-weight: 650; letter-spacing: -.01em; }
+.ov-clock { font-size: 22px; font-weight: 600; color: var(--fg-dim); }
+
+.ov-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  min-height: 0;
+}
+.ov-card {
+  display: flex; flex-direction: column; gap: 1px;
+  padding: 12px 14px 11px; border-radius: var(--r-lg);
+  background: var(--card-grad); border: 1px solid var(--line-soft);
+  text-align: left; cursor: pointer;
+  transition: transform var(--t-tap) var(--ease), border-color var(--t-move) var(--ease);
+}
+.ov-card.down { transform: scale(.97); }
+.ov-top { display: flex; align-items: center; gap: 8px; }
+.ov-ic { display: flex; color: var(--fg-faint); transition: color var(--t-move) var(--ease); }
+.ov-card.lit { border-color: var(--accent-line); }
+.ov-card.lit .ov-ic { color: var(--accent-text); }
+.ov-name { font-size: 15px; font-weight: 600; flex: 1; min-width: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* per-room actions, reachable without opening the room */
+.ov-acts { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; margin-top: 10px; }
+.ov-act {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  height: 44px; border-radius: 11px;
+  background: var(--surface-3); color: var(--fg-faint);
+  font-size: 12px; font-weight: 600;
+  transition: transform var(--t-tap) var(--ease), background var(--t-move) var(--ease), color var(--t-move) var(--ease);
+}
+.ov-act.down { transform: scale(.93); }
+.ov-act.on { background: var(--lys-dim); color: var(--accent-text); }
+.ov-act:nth-child(2).on { background: var(--musik-dim); color: var(--musik); }
+
+.ov-temp { font-size: 34px; font-weight: 250; letter-spacing: -.03em; margin-top: auto; line-height: 1.05; }
+.ov-sum { justify-content: flex-start; }
+.ov-card.heating .ov-temp { color: var(--varme); }
+.ov-target { font-size: 12px; color: var(--fg-faint); font-weight: 600; min-height: 15px; }
+.ov-card.heating .ov-target { color: var(--varme); }
+.ov-now {
+  font-size: 12px; color: var(--fg-faint); min-height: 16px; margin-top: 1px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ov-now.playing { color: var(--musik); font-weight: 600; }
+
+/* house summary occupies the spare grid cell */
+.ov-sum {
+  display: flex; flex-direction: column; gap: 7px;
+  padding: 12px 14px; border-radius: var(--r-lg);
+  background: var(--card-grad); border: 1px solid var(--line-soft);
+}
+.ov-sum-hd {
+  font-size: 11px; font-weight: 700; letter-spacing: .07em;
+  text-transform: uppercase; color: var(--fg-faint); margin-bottom: 2px;
+}
+.ov-sum-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--fg-faint); }
+.ov-sum-row svg { flex: 0 0 auto; }
+.ov-sum-row b { font-size: 19px; font-weight: 600; color: var(--fg); min-width: 20px; font-variant-numeric: tabular-nums; }
+.ov-sum-row:nth-child(2) svg { color: var(--accent-text); }
+.ov-sum-row:nth-child(3) svg { color: var(--varme); }
+.ov-sum-row:nth-child(4) svg { color: var(--musik); }
+
+/* Reclaimed space goes to house-wide actions — the thing a kitchen panel is
+   actually used for on the way past. */
+.ov-scenes {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+  min-height: 0;
+}
+.ov-scenes > * { height: 100%; }
+.ov-scenes .scene-tile { height: 100%; gap: 8px; }
+.ov-scenes .scene-name { font-size: 14px; }
+.ov-house {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; border-radius: var(--r-md);
+  background: var(--card-grad); border: 1px solid var(--line-soft); color: var(--fg-dim);
+  font-size: 14px; font-weight: 600;
+  transition: transform var(--t-tap) var(--ease), border-color var(--t-move) var(--ease), color var(--t-move) var(--ease);
+}
+.ov-house.down { transform: scale(.96); }
+.ov-house.lys.down { border-color: var(--accent-line); color: var(--accent-text); }
+
+/* room detail slides over the grid — transform only, no layout, no blur */
+.ov-detail {
+  position: absolute; inset: 0; z-index: 10;
+  /* transparent so the scene wash on <body> shows through; the grid fades out
+     underneath instead of being covered */
+  background: transparent;
+  display: grid; grid-template-rows: 56px 1fr;
+  transform: translateX(100%);
+  transition: transform var(--t-move) var(--ease);
+  will-change: transform;
+}
+.ov-detail.open { transform: translateX(0); }
+.ov-grid, .ov-scenes { transition: opacity var(--t-move) var(--ease); }
+.ov.detail-open .ov-grid, .ov.detail-open .ov-scenes { opacity: 0; pointer-events: none; }
+.ov-back {
+  display: flex; align-items: center; gap: 6px; padding: 0 20px;
+  color: var(--fg-dim); font-size: 15px; font-weight: 600;
+  justify-self: start;
+  transition: transform var(--t-tap) var(--ease);
+}
+.ov-back.down { transform: scale(.94); }
+.ov-back svg { transform: rotate(180deg); }
+.ov-detail-host { position: relative; overflow: hidden; }
+.ov-detail-host .panel { display: none; height: 100%; }
+.ov-detail-host .panel.show { display: grid; }
+
+/* the XL has room for a bigger tab bar and wider room panes */
+:root[data-model="xl"] { --tabbar-h: 76px; --touch: 62px; }
+:root[data-model="xl"] .pane { padding: 20px 24px; gap: 14px; }
+:root[data-model="xl"] .scene-grid { grid-template-columns: repeat(6, 1fr); }
+:root[data-model="xl"] .hero-val { font-size: 72px; }

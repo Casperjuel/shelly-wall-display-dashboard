@@ -1,0 +1,187 @@
+/* ───────────────────────────────────────────────────────────────────────────
+   hjem — design tokens
+
+   Two themes and a per-room accent, all expressed as custom properties so a
+   theme change is one attribute write on <html> rather than a re-render.
+
+   Constraint-driven, target: Mali-400 MP2 / 1 GB RAM.
+   FORBIDDEN, project-wide:
+     filter / backdrop-filter   → no GPU path on Mali-400, forces software
+     animated box-shadow        → repaints the whole layer every frame
+     gradients on moving parts  → a gradient under `transform` is re-rasterised
+     large raster backgrounds   → 1 GB RAM, 8 GB flash
+     web fonts                  → blocks first paint; system-ui is already there
+   Gradients on STATIC surfaces are fine: painted once, then cached.
+   ALLOWED for animation: transform, opacity.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* Overwritten per room at boot from rooms.yaml. Neutral amber fallback. */
+  --accent: #E0913C;
+  /* --accent-soft / --accent-line / --accent-text / --lys-dim / --varme-dim /
+     --musik-dim / --page-wash are computed from --accent by ui/theme.ts and set
+     on <html> at boot. They are NOT derived with color-mix(): that needs
+     Chrome 111+, and an un-updated Android 11 WebView can be Chrome 90. */
+  --accent-soft: rgba(224,145,60,.16);
+  --accent-line: rgba(224,145,60,.34);
+  --accent-text: var(--accent);
+
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 18px;
+
+  --t-tap:   90ms;
+  --t-move: 140ms;
+  --t-theme: 1200ms;
+  --ease: cubic-bezier(.2,.7,.3,1);
+
+  --touch: 56px;
+}
+
+/* ── night ──────────────────────────────────────────────────────────────── */
+:root, :root[data-theme="dark"] {
+  --bg:        #0B0D10;
+  --bg-tint:   #101319;
+  --surface-1: #14181E;
+  --surface-2: #1A1F27;
+  --surface-3: #232A34;
+  --line:      #262E39;
+  --line-soft: #1C232C;
+
+  --fg:        #EEF1F5;
+  --fg-dim:    #98A2B0;
+  --fg-faint:  #5F6B7B;
+
+  --lys:      var(--accent);
+  --lys-dim:  #2C2519;
+  --varme:    #FF8552;
+  --varme-dim:#3A241A;
+  --musik:    #58CE92;
+  --musik-dim:#17301F;
+  --scene:    #8B9BFF;
+  --danger:   #FF6B6B;
+
+  /* One very soft wash from the room's accent — the only "colour" in the
+     chrome. Static, so it costs a single paint. */
+  --page-wash: none;   /* set by theme.ts */
+  --card-grad: linear-gradient(180deg, #171C23 0%, #131820 100%);
+  --shade: rgba(0,0,0,.45);
+}
+
+/* ── day ────────────────────────────────────────────────────────────────── */
+:root[data-theme="light"] {
+  /* Warm off-white, not paper-white: a 4" panel at full white on a wall at
+     midday is a lamp, not a display. */
+  --bg:        #F2EFEA;
+  --bg-tint:   #EDE9E2;
+  --surface-1: #FFFFFF;
+  --surface-2: #F5F2EC;
+  --surface-3: #E8E3DA;
+  --line:      #DFD9CF;
+  --line-soft: #EAE5DC;
+
+  --fg:        #1A1D22;
+  --fg-dim:    #5C6672;
+  --fg-faint:  #8D97A3;
+
+  --lys:      var(--accent);
+  --lys-dim:  #F6EADA;
+  --varme:    #D2551F;
+  --varme-dim:#FBE7DE;
+  --musik:    #17875A;
+  --musik-dim:#DFF0E8;
+  --scene:    #4C5FD0;
+  --danger:   #C93636;
+
+  --page-wash: none;   /* set by theme.ts */
+  --card-grad: linear-gradient(180deg, #FFFFFF 0%, #FBF9F5 100%);
+  --shade: rgba(60,50,35,.22);
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  /* the single most important line in this file: removes the legacy
+     ~300 ms double-tap-zoom wait on every touch target */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 15px;
+  line-height: 1.25;
+  -webkit-user-select: none;
+  user-select: none;
+  overscroll-behavior: none;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* The accent wash lives on body, painted once behind everything. */
+body { background-image: var(--page-wash); background-repeat: no-repeat; }
+
+/* Scene feedback. Two stacked layers crossfade because background-image is not
+   animatable; opacity is compositor-only, which is the one animation this GPU
+   handles cheaply. Both sit behind #app. */
+.mood-wash {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-repeat: no-repeat;
+  opacity: 0;
+  transition: opacity 850ms cubic-bezier(.3,.6,.3,1);
+  will-change: opacity;
+}
+/* Brightness half of the feedback — darkens for sleep scenes, lifts for bright
+   ones. Colour alone does not read as "dim". */
+.mood-scrim {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-color: transparent;
+  transition: background-color 850ms cubic-bezier(.3,.6,.3,1);
+}
+#app { position: relative; z-index: 1; }
+
+/* Theme crossfade. Scoped to the handful of properties that actually carry the
+   theme, and only while `.theming` is set — so these transitions are never
+   live during normal interaction, where they would tax every repaint. */
+html.theming, html.theming body,
+html.theming .tile, html.theming .hdr, html.theming .tabbar,
+html.theming .pane, html.theming .ov-card, html.theming .ov-sum,
+html.theming .quick-btn, html.theming .scene-tile, html.theming .light-tile,
+html.theming .step, html.theming .preset, html.theming .tbtn, html.theming .fav,
+html.theming .ov-act, html.theming .ov-house, html.theming .chip, html.theming .slider {
+  transition: background-color var(--t-theme) linear,
+              color var(--t-theme) linear,
+              border-color var(--t-theme) linear !important;
+}
+
+button { font: inherit; color: inherit; background: none; border: 0; }
+
+.press { transition: transform var(--t-tap) var(--ease); }
+.press.down { transform: scale(.955); }
+
+.scroll {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  overscroll-behavior: contain;
+}
+.scroll::-webkit-scrollbar { display: none; }
+
+/* Each tile isolates its own layout/paint so one light changing cannot
+   invalidate the rest of the screen. */
+.tile { contain: layout style paint; }
+
+.tabular { font-variant-numeric: tabular-nums; }
+
+.offline-veil {
+  position: fixed; inset: 0; z-index: 50;
+  background: var(--shade);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none;
+  transition: opacity var(--t-move) var(--ease);
+}
+body.offline .offline-veil { opacity: 1; pointer-events: auto; }

@@ -1,0 +1,82 @@
+/* ── Vågeur: the children's sleep clock ─────────────────────────────────── */
+/* Takes the whole panel. Everything here is positioned from the clock and
+   repainted once a minute — nothing animates continuously, because a bedroom
+   panel that never lets the GPU idle is a bedroom panel that runs warm all
+   night. Transitions are long and eased so the change reads as the sky
+   shifting rather than the UI redrawing. */
+
+.wake {
+  position: absolute; inset: 0; z-index: 30;
+  overflow: hidden;
+  display: flex; flex-direction: column; align-items: center;
+  color: #eef2f8;
+}
+
+.wake-sky {
+  position: absolute; inset: 0;
+  transition: background 4s linear;
+}
+/* During a demo sweep the real transitions are far too slow to keep up, so
+   they are shortened for the duration. */
+.wake.is-demo .wake-sky   { transition: background 220ms linear; }
+.wake.is-demo .wake-stars { transition: opacity 220ms linear; }
+.wake.is-demo .wake-moon,
+.wake.is-demo .wake-sun   { transition: transform 220ms linear, opacity 220ms linear; }
+
+.wake-stars {
+  position: absolute; inset: 0; pointer-events: none;
+  transition: opacity 6s linear;
+}
+.wake-stars i {
+  position: absolute; border-radius: 50%;
+  background: #dfe7f5;
+  box-shadow: 0 0 4px rgba(223,231,245,.8);
+}
+
+/* Moon and sun share one arc. Both are translated on the compositor. */
+.wake-bodies { position: absolute; inset: 0; pointer-events: none; }
+.wake-moon, .wake-sun {
+  position: absolute; left: 50%; margin-left: -58px;
+  width: 116px; height: 116px; top: 14%;
+  transition: transform 4s cubic-bezier(.4,.1,.3,1), opacity 4s linear;
+  will-change: transform;
+}
+.wake-sun { filter: none; }
+
+/* words */
+.wake-label {
+  position: relative; margin-top: auto;
+  font-size: 30px; font-weight: 300; letter-spacing: -.02em;
+  text-shadow: 0 2px 12px rgba(0,0,0,.5);
+}
+.wake-clock {
+  position: relative;
+  font-size: 15px; font-weight: 600; opacity: .55; margin-top: 2px;
+}
+.wake-hint {
+  position: relative;
+  font-size: 15px; font-weight: 500; opacity: .8;
+  margin: 6px 0 30px; text-align: center; padding: 0 24px;
+  text-shadow: 0 1px 8px rgba(0,0,0,.5);
+}
+
+/* Night: hold everything back. The moon should be the brightest thing here. */
+.wake.is-night .wake-label { font-size: 26px; opacity: .5; }
+.wake.is-night .wake-hint  { opacity: .35; font-size: 13px; }
+.wake.is-night .wake-clock { opacity: .3; }
+
+/* Morning: this is the moment the whole thing exists for — make it obvious. */
+.wake.is-morning .wake-label {
+  font-size: 40px; font-weight: 600; color: #fff5e2;
+}
+.wake.is-morning .wake-hint {
+  font-size: 19px; font-weight: 700; opacity: 1; color: #fff;
+}
+
+/* Tap anywhere to peek at the normal panel for two minutes. Covers the whole
+   clock: a child should not have to find a hit target, and the peek expires by
+   itself so nobody can leave the sleep clock switched off overnight. */
+.wake-exit {
+  position: absolute; inset: 0;
+  z-index: 31; background: none; opacity: 0;
+}
