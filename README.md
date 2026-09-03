@@ -20,6 +20,14 @@ day, dark by night, following `sun.sun`.</sub>
 |---|---|
 | ![](docs/shots/xl-dark.png) | ![](docs/shots/debug-suite.png) |
 
+### Vågeur — the children's sleep clock
+
+<img src="docs/wake-cycle.gif" width="360" alt="Sleep clock cycling from night through sunrise to morning">
+
+<sub>A full night compressed: moon crossing the sky, the 90-minute sunrise from
+05:30, and "Godmorgen · Du må godt stå op" at 07:00. The backlight ramps with
+it, 4 % → 35 %. Render your own with `node tools/wake-sim.mjs barn_1`.</sub>
+
 ---
 
 > ### ⚠️ Work in progress
