@@ -22,9 +22,13 @@ mkdirSync(OUT, { recursive: true });
 // evening → night → the full 90-minute dawn → morning
 const steps = [];
 const push = (h, m) => steps.push([h, m]);
-push(19, 45); push(21, 0); push(23, 0); push(2, 0); push(4, 30);
-for (let t = 5 * 60 + 30; t <= 7 * 60; t += 3) push(Math.floor(t / 60) % 24, t % 60);
-for (let t = 7 * 60 + 2; t <= 8 * 60 + 20; t += 6) push(Math.floor(t / 60) % 24, t % 60);
+// Evening and the middle of the night are sampled sparsely — nothing happens
+// but the moon creeping across. The 90-minute sunrise gets a frame every
+// minute, because that is the part worth watching.
+push(19, 45); push(20, 30); push(21, 30); push(22, 30);
+push(23, 30); push(0, 30); push(1, 30); push(2, 30); push(3, 30); push(4, 30); push(5, 0);
+for (let t = 5 * 60 + 30; t <= 7 * 60; t += 1) push(Math.floor(t / 60) % 24, t % 60);
+for (let t = 7 * 60 + 2; t <= 8 * 60 + 20; t += 4) push(Math.floor(t / 60) % 24, t % 60);
 
 const br = await chromium.launch({ channel: 'chrome' });
 const page = await br.newPage({ viewport: { width: 480, height: 480 }, deviceScaleFactor: 2, hasTouch: true });
@@ -59,10 +63,11 @@ for (const [h, m] of steps) {
 await br.close();
 console.log(`captured ${n} frames`);
 
-execFileSync('ffmpeg', ['-y', '-framerate', '10', '-i', `${OUT}/f%04d.png`,
+const FPS = process.env.SIM_FPS ?? '14';
+execFileSync('ffmpeg', ['-y', '-framerate', FPS, '-i', `${OUT}/f%04d.png`,
   '-vf', 'scale=480:-1:flags=lanczos', '-c:v', 'libx264', '-pix_fmt', 'yuv420p',
   '/tmp/wake-sim.mp4'], { stdio: 'ignore' });
 execFileSync('ffmpeg', ['-y', '-i', '/tmp/wake-sim.mp4',
-  '-vf', 'fps=10,scale=420:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse',
+  '-vf', `fps=${FPS},scale=400:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=128[p];[s1][p]paletteuse=dither=bayer:bayer_scale=3`,
   '-loop', '0', '/tmp/wake-sim.gif'], { stdio: 'ignore' });
 console.log('→ /tmp/wake-sim.mp4  and  /tmp/wake-sim.gif');
