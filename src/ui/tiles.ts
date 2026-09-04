@@ -1,7 +1,9 @@
 import type { Store } from '../ha/store';
+import type { HaConnection } from '../ha/connection';
 import type { Actions } from '../ha/actions';
 import type { LightCfg, SceneCfg, Config } from '../generated/config';
 import type { ThemeController } from './theme';
+import { browseFavourites, type Favourite } from '../ha/media';
 import type { MoodWash } from './moodwash';
 import { el, text, cls, num, type Tile } from './dom';
 import { icon } from './icons';
@@ -39,7 +41,7 @@ export function auraFromArt(
   void dark;
 }
 
-export interface Ctx { store: Store; actions: Actions; cfg: Config; theme: ThemeController; mood: MoodWash }
+export interface Ctx { store: Store; actions: Actions; cfg: Config; theme: ThemeController; mood: MoodWash; conn: HaConnection }
 
 /** Stable, human-readable control id: "<room>.<group>.<control>".
  *  Used by data-key so the debug harness can press it by name. */
@@ -214,14 +216,53 @@ export function mediaTile(ctx: Ctx, entity: string, key: string): Tile {
   const volVal = el('span', 'vol-val tabular');
   volRow.append(volIc, volTrack, volVal);
 
+  // ── playlist tiles ───────────────────────────────────────────────────────
+  // Artwork makes these pickable across a room; a row of text pills does not.
+  // Home Assistant's media browser supplies the covers, so start from the
+  // manifest's favourites and upgrade in place once the browse returns.
   const favRow = el('div', 'fav-row scroll');
-  for (const f of ctx.cfg.favourites) {
-    const b = el('button', 'fav press');
-    b.dataset.key = K(key, 'fav', f.name.toLowerCase());
-    b.textContent = f.name;
-    bindPress(b, () => ctx.actions.selectSource(entity, f.source));
-    favRow.append(b);
-  }
+
+  const renderFavs = (list: Favourite[]) => {
+    favRow.textContent = '';
+    for (const f of list) {
+      const b = el('button', 'fav-tile press');
+      b.dataset.key = K(key, 'fav', f.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 24));
+      const art = el('span', 'fav-art');
+      if (f.thumbnail) {
+        const img = el('img') as HTMLImageElement;
+        img.loading = 'lazy';
+        img.alt = '';
+        img.src = f.thumbnail;
+        // A dead cover URL must not leave a broken-image glyph on a wall panel.
+        img.onerror = () => { img.remove(); cls(art, 'empty', true); };
+        art.append(img);
+      } else {
+        cls(art, 'empty', true);
+        art.innerHTML = icon('music', 20);
+      }
+      const label = el('span', 'fav-name');
+      text(label, f.title);
+      b.append(art, label);
+      bindPress(b, () => ctx.actions.selectSource(entity, f.title));
+      favRow.append(b);
+    }
+  };
+
+  // Start from the manifest so there is something to touch immediately, then
+  // upgrade to real artwork once the browse returns.
+  renderFavs(ctx.cfg.favourites.map((f) => ({ title: f.source })));
+
+  // The browse has to wait for the socket: tiles are built during panel
+  // construction, which happens before connect(). Firing early sends into a
+  // closed socket and fails silently ten seconds later.
+  let browsed = false;
+  const offConn = ctx.conn.onState((st) => {
+    if (st !== 'ready' || browsed) return;
+    browsed = true;
+    browseFavourites(ctx.conn, entity).then((items) => {
+      if (items.length) renderFavs(items);
+    });
+  });
 
   const auraEl = el('div', 'media-aura');
   root.append(auraEl, nowPlaying, transport, volRow, favRow);
@@ -281,7 +322,7 @@ export function mediaTile(ctx: Ctx, entity: string, key: string): Tile {
   const off = ctx.store.subscribe([entity], render);
   const offTheme = ctx.theme.onChange(() => { lastAura = ''; render(); });
   render();
-  return { el: root, destroy() { off(); offTheme(); } };
+  return { el: root, destroy() { off(); offTheme(); offConn(); } };
 }
 
 /* ── SCENER ────────────────────────────────────────────────────────────────

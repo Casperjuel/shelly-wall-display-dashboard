@@ -149,7 +149,7 @@ function start(tok: string, url: string) {
   if (forced === 'light' || forced === 'dark') theme.set(forced);
 
   const mood = createMoodWash(theme, room!.slug);
-  const ctx: Ctx = { store, actions, cfg: CONFIG, theme, mood };
+  const ctx: Ctx = { store, actions, cfg: CONFIG, theme, mood, conn };
 
   setBusRoom(room!.slug);
   const view = model.shell === 'overview' ? buildOverview(ctx) : buildPanel(ctx, room!);

@@ -347,20 +347,38 @@
 .vol-val { font-size: 13px; color: var(--fg-dim); min-width: 26px; text-align: right; }
 
 .fav-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; }
-.fav {
-  padding: 10px 15px; border-radius: 999px; flex: 0 0 auto;
-  background: var(--surface-2); border: 1px solid var(--line-soft); color: var(--fg-dim);
-  font-size: 13px; font-weight: 600;
-  /* Real Sonos favourites are long. Cap the width and ellipsise rather than
-     letting one name push the rest off the scroller. */
-  max-width: 42%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  transition: transform var(--t-tap) var(--ease), background var(--t-move) var(--ease);
-}
-/* fade the right edge so it reads as scrollable rather than clipped */
+/* Playlist tiles — artwork first, so they can be picked out across a room.
+   Horizontal scroller: a wall panel has no vertical room to spare, and a
+   sideways flick is a natural gesture for "more of the same kind of thing". */
 .fav-row {
-  -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent 100%);
-  mask-image: linear-gradient(90deg, #000 88%, transparent 100%);
+  display: flex; gap: 10px; overflow-x: auto; padding: 2px 0 4px;
+  /* fade the right edge so it reads as scrollable rather than clipped */
+  -webkit-mask-image: linear-gradient(90deg, #000 90%, transparent 100%);
+  mask-image: linear-gradient(90deg, #000 90%, transparent 100%);
+  scroll-snap-type: x proximity;
 }
+.fav-tile {
+  flex: 0 0 auto; width: 82px;
+  display: flex; flex-direction: column; align-items: stretch; gap: 5px;
+  scroll-snap-align: start;
+  transition: transform var(--t-tap) var(--ease);
+}
+.fav-tile.down { transform: scale(.93); }
+.fav-art {
+  position: relative; width: 82px; height: 82px; border-radius: var(--r-md);
+  overflow: hidden; background: var(--surface-3);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--fg-faint);
+}
+.fav-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.fav-art.empty { background: var(--card-grad); border: 1px solid var(--line-soft); }
+.fav-name {
+  font-size: 11px; font-weight: 600; line-height: 1.2; color: var(--fg-dim);
+  /* two lines, then ellipsis — real playlist names are long */
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; text-align: left;
+}
+.fav-tile.down .fav-name { color: var(--fg); }
 .fav.down { transform: scale(.93); background: var(--musik-dim); color: var(--musik); }
 
 /* ── connection veil ───────────────────────────────────────────────────── */

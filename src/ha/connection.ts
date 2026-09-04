@@ -196,6 +196,16 @@ export class HaConnection {
   onEntities(l: Listener) { this.entityListeners.add(l); return () => this.entityListeners.delete(l); }
   onState(l: StateListener) { this.stateListeners.add(l); l(this.state); return () => this.stateListeners.delete(l); }
 
+  /** Walk Home Assistant's media browser. */
+  browseMedia(entity_id: string, media_content_type?: string, media_content_id?: string) {
+    return this.sendWithId({
+      type: 'media_player/browse_media',
+      entity_id,
+      ...(media_content_type ? { media_content_type } : {}),
+      ...(media_content_id !== undefined ? { media_content_id } : {}),
+    });
+  }
+
   callService(domain: string, service: string, target?: any, data?: Record<string, any>) {
     return this.sendWithId({
       type: 'call_service',

@@ -361,6 +361,36 @@ wss.on('connection', (ws) => {
       return;
     }
 
+    // Mirrors Home Assistant's media browser: Favorites → folders → items,
+    // with artwork. Without this the playlist tiles can only be developed
+    // against a real speaker.
+    if (m.type === 'media_player/browse_media') {
+      const covers = ['/cover1.svg', '/cover2.svg', '/cover3.svg', '/cover4.svg'];
+      const favs = (man.sonos_favourites ?? []);
+      let result;
+      if (!m.media_content_id && !m.media_content_type) {
+        result = { title: 'Media', media_content_type: 'root', media_content_id: '',
+                   children: [{ title: 'Favorites', media_content_type: 'favorites',
+                                media_content_id: '', can_expand: true, can_play: false }] };
+      } else if (m.media_content_type === 'favorites') {
+        result = { title: 'Favorites', media_content_type: 'favorites', media_content_id: '',
+                   children: [{ title: 'Playlists', media_content_type: 'favorites_folder',
+                                media_content_id: 'playlists', can_expand: true }] };
+      } else {
+        result = {
+          title: 'Playlists', media_content_type: 'favorites_folder',
+          media_content_id: 'playlists',
+          children: favs.map((f, i) => ({
+            title: f.source, media_content_type: 'favorite_item_id',
+            media_content_id: `fav:${i}`, thumbnail: covers[i % covers.length],
+            can_play: true, can_expand: false,
+          })),
+        };
+      }
+      ws.send(JSON.stringify({ id: m.id, type: 'result', success: true, result }));
+      return;
+    }
+
     if (m.type === 'call_service') {
       ws.send(JSON.stringify({ id: m.id, type: 'result', success: true, result: { context: {} } }));
       const targets = [].concat(m.target?.entity_id ?? []);
