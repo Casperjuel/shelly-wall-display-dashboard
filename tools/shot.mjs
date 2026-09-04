@@ -12,7 +12,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = join(ROOT, 'docs', 'shots');
 mkdirSync(OUT, { recursive: true });
 
-const B = process.argv[2] ?? 'http://localhost:8123';
+const B = process.argv[2] ?? 'http://localhost:8125';
 const br = await chromium.launch({ channel: 'chrome' });
 
 async function shot({ room, size = [480, 480], theme = 'dark', tab, prep, name }) {

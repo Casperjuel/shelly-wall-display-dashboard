@@ -14,7 +14,9 @@ import { writeFileSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const URL_ = process.argv[2] ?? 'ws://localhost:8123/api/websocket';
+// 8125 by default: 8123 is where a real Home Assistant usually lives, and
+// pointing the mock's tests at it just produces confusing auth failures.
+const URL_ = process.argv[2] ?? 'ws://localhost:8125/api/websocket';
 
 let pass = 0, fail = 0;
 const ok = (name, cond, extra = '') => {

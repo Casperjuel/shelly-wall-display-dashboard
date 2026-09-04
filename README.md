@@ -109,6 +109,7 @@ npm run gen                 # copies rooms.example.yaml → rooms.yaml on first 
                             # then generates typed config, dashboards, HA package
 npm run build               # → public/hjem.js
 npm run mock                # mock HA + static server on :8125
+                            # (8123 left free for a real Home Assistant)
 ```
 
 Then open the debug suite, which renders **all nine panels at true device pixel

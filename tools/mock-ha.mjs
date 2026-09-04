@@ -7,7 +7,7 @@
  * bridge / Wavin controller round trip; crank it to 800 and the optimistic
  * layer is the only reason the UI still feels alive.
  *
- *   node tools/mock-ha.mjs --lag 350 --port 8123
+ *   node tools/mock-ha.mjs --lag 350 --port 8125
  */
 import { createServer } from 'node:http';
 import { readFileSync, existsSync, statSync, appendFileSync, copyFileSync } from 'node:fs';
@@ -20,7 +20,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const argv = process.argv.slice(2);
 const arg = (n, d) => { const i = argv.indexOf('--' + n); return i >= 0 ? argv[i + 1] : d; };
 
-const PORT = +arg('port', 8123);
+const PORT = +arg('port', 8125);   // 8123 is left free for a real Home Assistant
 let LAG = +arg('lag', 300);            // ms before a "device" reports back
 let JITTER = +arg('jitter', 150);
 const TOKEN = 'mock-token';
