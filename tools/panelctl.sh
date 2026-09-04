@@ -17,6 +17,13 @@
 #  Panels are listed in panels.yaml (gitignored — it holds your IPs); copy
 #  panels.example.yaml to start. Secrets come from .env, never from this file.
 #
+#  ── Only one machine at a time ─────────────────────────────────────────────
+#  adbd on these panels serves a single client. If your laptop holds the
+#  connection, the NUC is simply refused — with no hint that another machine is
+#  the reason. Release it first:
+#
+#      adb disconnect <panel-ip>:5555     # or: adb kill-server
+#
 #  ── ADB is not persistent ──────────────────────────────────────────────────
 #  Network adb on these panels does not survive a reboot. Before provisioning,
 #  on the panel: Settings -> About Device, then tap the firmware version and
@@ -83,9 +90,11 @@ cmd_status() {
   for r in $(rooms); do
     local ip; ip="$(ip_of "$r")"
     local adb_state=- kiosk=- url=-
-    if nc -z -G 2 "$ip" 5555 >/dev/null 2>&1; then
+    # `adb connect` rather than a port probe: a bare TCP check can time out on
+    # a busy panel and report "closed" a second before provisioning succeeds.
+    if connect "$ip"; then
       adb_state=open
-      if connect "$ip"; then
+      if true; then
         # `|| true` throughout: under `set -e` a grep that matches nothing
         # fails the whole assignment and aborts the loop before anything is
         # printed — which is exactly how this reported "no panels" while
