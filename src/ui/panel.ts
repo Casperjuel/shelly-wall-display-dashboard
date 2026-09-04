@@ -217,7 +217,8 @@ export function buildPanel(ctx: Ctx, room: RoomCfg): Tile {
     // now playing
     const playing = !!room.media && ctx.store.get(room.media)?.state === 'playing';
     const title = room.media ? ctx.store.attr<string>(room.media, 'media_title', '') : '';
-    text(npT, room.media ? (title || (playing ? '—' : 'Intet afspilles')) : 'Ingen højttaler');
+    text(npT, !room.media ? 'Ingen højttaler'
+      : title || (playing ? 'Afspiller' : 'Intet afspilles'));
     text(npA, room.media ? ctx.store.attr<string>(room.media, 'media_artist', '') : '');
     npBtn.innerHTML = icon(playing ? 'pause' : 'play', 22, true);
     cls(npTile, 'playing', playing);

@@ -245,11 +245,15 @@ export function mediaTile(ctx: Ctx, entity: string, key: string): Tile {
   const render = () => {
     const st = ctx.store.get(entity);
     const playing = st?.state === 'playing';
-    const idle = !st || st.state === 'unavailable' || st.state === 'off';
+    // Sonos reports `idle` when it has nothing queued, and `standby` when the
+    // speaker is asleep. The mock only ever produced playing/paused, so these
+    // rendered as a bare em-dash until a real speaker was connected.
+    const idle = !st || ['unavailable', 'off', 'idle', 'standby', 'unknown'].includes(st.state);
     const muted = ctx.store.attr<boolean>(entity, 'is_volume_muted', false);
     const v = ctx.actions.volumePct(entity);
 
-    text(npTitle, ctx.store.attr<string>(entity, 'media_title', idle ? 'Intet afspilles' : '—'));
+    const title = ctx.store.attr<string>(entity, 'media_title', '');
+    text(npTitle, title || (idle ? 'Intet afspilles' : 'Afspiller'));
     text(npArtist, ctx.store.attr<string>(entity, 'media_artist', ''));
     bPlay.innerHTML = icon(playing ? 'pause' : 'play', 30, true);
     volIc.innerHTML = icon(muted ? 'mute' : 'volume', 20);

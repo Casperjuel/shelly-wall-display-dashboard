@@ -274,10 +274,12 @@ sonos_aura: ["#2BD4A0", "#3C8FFF", "#C766FF"]
 
 # ── Sonos favourites shown as one-tap buttons on the Musik tab ──────────────
 sonos_favourites:
+  # Real Sonos favourite names are long — keep one here so the layout is
+  # exercised honestly during development.
   - { name: "P3",        source: "DR P3" }
   - { name: "P4",        source: "DR P4 København" }
-  - { name: "Nova",      source: "Radio Nova" }
-  - { name: "Playlist",  source: "Favoritter" }
+  - { name: "Morgen",    source: "Godmorgen børnehave" }
+  - { name: "Everyday",  source: "Everyday (feat. Rod Stewart, Miguel & Mark Ronson)" }
 
 # ── Heating presets (Wavin) ────────────────────────────────────────────────
 heating:
