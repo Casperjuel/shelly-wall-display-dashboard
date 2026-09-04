@@ -5,12 +5,16 @@ import { bindPress } from './press';
 import { lightTile, climateTile, mediaTile, sceneTile, sensorChip, roomTemperature, artUrl, auraFromArt, K, type Ctx } from './tiles';
 import { auraGradient } from './gradient';
 import { buildWakeClock, wakeState, type WakeOverride } from './wake';
+import { buildSettings } from './settings';
+import { buildSpeakerRow } from './speakers';
 
 const TABS = [
   { id: 'hjem',  label: 'Hjem',  ico: 'home' },
   { id: 'lys',   label: 'Lys',   ico: 'bulb' },
   { id: 'varme', label: 'Varme', ico: 'thermo' },
   { id: 'musik', label: 'Musik', ico: 'music' },
+  // Device settings, so the stock Shelly UI is never needed on the glass.
+  { id: 'panel', label: 'Panel', ico: 'gear' },
 ] as const;
 
 /**
@@ -107,9 +111,51 @@ export function buildPanel(ctx: Ctx, room: RoomCfg): Tile {
   else pVarme.append(el('div', 'empty', 'Ingen gulvvarme i dette rum'));
 
   // Musik
+  //
+  // The room's own speaker is the default, but any Sonos in the house can be
+  // driven from here, and speakers can be grouped. Retargeting rebuilds the
+  // media tile rather than mutating it: the tile owns its own subscriptions,
+  // and swapping the entity underneath would leave them pointing at the old
+  // one. A rebuild on an already-visible tab is a few milliseconds.
   const pMusik = pane('musik');
-  if (room.media) { const t = mediaTile(ctx, room.media, K(kb, 'musik')); tiles.push(t); pMusik.append(t.el); }
-  else pMusik.append(el('div', 'empty', 'Ingen højttaler i dette rum'));
+  // Which speaker this panel is currently driving. Starts as the room's own and
+  // moves when you pick another on the Musik tab — the Hjem card follows, so a
+  // glance shows what you are actually controlling rather than a speaker you
+  // deliberately switched away from.
+  let mediaTarget: string | undefined = room.media;
+  if (room.media) {
+    const holder = el('div', 'musik-holder');
+    let mt: ReturnType<typeof mediaTile> | null = null;
+
+    const mount = (entity: string) => {
+      if (mt) { mt.destroy(); mt.el.remove(); }
+      mt = mediaTile(ctx, entity, K(kb, 'musik'));
+      holder.append(mt.el);
+    };
+
+    const spk = buildSpeakerRow(ctx, room.media, kb, (entity) => {
+      mediaTarget = entity;
+      mount(entity);
+      retargetHome(entity);
+    });
+    tiles.push(spk);
+    pMusik.append(spk.el, holder);
+    mount(room.media);
+
+    // The rebuilt tile is not in `tiles`, so tear it down with the panel.
+    tiles.push({ el: holder, destroy: () => { if (mt) mt.destroy(); } });
+  } else {
+    pMusik.append(el('div', 'empty', 'Ingen højttaler i dette rum'));
+  }
+
+  // Panel — brightness, volume and the Android screens. Built last so it sits
+  // after the room panes in the DOM, matching the tab order.
+  const pPanel = pane('panel');
+  {
+    const t = buildSettings(ctx, kb, room.short, room.accent);
+    tiles.push(t);
+    pPanel.append(t.el);
+  }
 
   // ── tab bar ──────────────────────────────────────────────────────────────
   const tabbar = el('nav', 'tabbar');
@@ -203,7 +249,7 @@ export function buildPanel(ctx: Ctx, room: RoomCfg): Tile {
   bindPress(varmeTile, () => select('varme'), { immediate: true });
   bindPress(lysTile, () => select('lys'), { immediate: true });
   if (room.media) {
-    bindPress(npBtn, () => ctx.actions.playPause(room.media!), { immediate: true, stop: true });
+    bindPress(npBtn, () => { if (mediaTarget) ctx.actions.playPause(mediaTarget); }, { immediate: true, stop: true });
   }
   bindPress(lBtn, () => {
     ctx.actions.setLightsInBulk(lightIds, !lightIds.some((e) => ctx.store.isOn(e)));
@@ -215,15 +261,24 @@ export function buildPanel(ctx: Ctx, room: RoomCfg): Tile {
   let auraCols = ctx.cfg.aura;
   const renderHome = () => {
     // now playing
-    const playing = !!room.media && ctx.store.get(room.media)?.state === 'playing';
-    const title = room.media ? ctx.store.attr<string>(room.media, 'media_title', '') : '';
-    text(npT, !room.media ? 'Ingen højttaler'
+    const m = mediaTarget;
+    const mst = m ? ctx.store.get(m) : undefined;
+    const playing = mst?.state === 'playing';
+    const mMissing = !!m && !mst;
+    const mOffline = mst?.state === 'unavailable';
+    const title = m ? ctx.store.attr<string>(m, 'media_title', '') : '';
+    text(npT, !m ? 'Ingen højttaler'
+      : mMissing ? 'Ingen højttaler'
+      : mOffline ? 'Højttaler offline'
       : title || (playing ? 'Afspiller' : 'Intet afspilles'));
-    text(npA, room.media ? ctx.store.attr<string>(room.media, 'media_artist', '') : '');
+    text(npA, !m ? ''
+      : mMissing ? 'Tilføj den i Home Assistant'
+      : mOffline ? 'Kan ikke nås'
+      : ctx.store.attr<string>(m, 'media_artist', ''));
     npBtn.innerHTML = icon(playing ? 'pause' : 'play', 22, true);
     cls(npTile, 'playing', playing);
-    cls(npBtn, 'hidden', !room.media);
-    const url = room.media ? artUrl(ctx, room.media) : null;
+    cls(npBtn, 'hidden', !m || mMissing || mOffline);
+    const url = m ? artUrl(ctx, m) : null;
     if (url !== lastArt) {
       lastArt = url;
       if (url) { npArt.src = url; cls(npArt, 'show', true); } else cls(npArt, 'show', false);
@@ -261,7 +316,17 @@ export function buildPanel(ctx: Ctx, room: RoomCfg): Tile {
   const clockTimer = setInterval(tick, 20000);
 
   const watch = [room.temperature, room.climate, room.media, ...lightIds].filter(Boolean) as string[];
-  const unsub = ctx.store.subscribe(watch, renderHome);
+  let unsub = ctx.store.subscribe(watch, renderHome);
+
+  /** Re-point the Hjem card's subscription at a newly chosen speaker. */
+  function retargetHome(entity: string) {
+    unsub();
+    const next = [room.temperature, room.climate, entity, ...lightIds].filter(Boolean) as string[];
+    unsub = ctx.store.subscribe(next, renderHome);
+    lastArt = null;
+    lastAura = '';
+    renderHome();
+  }
   const unsubTheme = ctx.theme.onChange(() => { lastArt = null; lastAura = ''; renderHome(); });
   renderHome();
 

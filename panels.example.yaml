@@ -1,0 +1,21 @@
+# Which panel is in which room.
+#
+# Copy to panels.yaml (gitignored) and fill in your own addresses. Give each
+# panel a DHCP reservation on your router first — a wall display that changes
+# address every lease is a panel you have to hunt for.
+#
+# The slugs must match the room slugs in rooms.yaml: panelctl builds each
+# panel's dashboard URL from its slug.
+#
+#   ./tools/panelctl.sh status
+#   ./tools/panelctl.sh provision all
+
+kokken:            192.168.1.41
+tv_stue:           192.168.1.42
+spisestue:         192.168.1.43
+kontor:            192.168.1.44
+sovevaerelse:      192.168.1.45
+theodors_vaerelse: 192.168.1.46
+carls_vaerelse:    192.168.1.47
+stort_bad:         192.168.1.48
+lille_bad:         192.168.1.49

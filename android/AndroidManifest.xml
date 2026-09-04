@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="dk.hjem.kiosk"
+    android:versionCode="1"
+    android:versionName="1.0">
+
+    <uses-sdk android:minSdkVersion="24" android:targetSdkVersion="33" />
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Screen brightness. On API 23+ this is a special permission that an app
+         cannot request silently; grant it over adb:
+           adb shell appops set dk.hjem.kiosk WRITE_SETTINGS allow -->
+    <uses-permission android:name="android.permission.WRITE_SETTINGS" />
+    <!-- The floating "Hjem" button shown while another app is in front. This
+         panel has no navigation bar, so without it anything launched from the
+         dashboard is only escapable over adb. Grant with:
+           adb shell appops set dk.hjem.kiosk SYSTEM_ALERT_WINDOW allow -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <application
+        android:label="Hjem"
+        android:icon="@android:drawable/ic_menu_compass"
+        android:allowBackup="false"
+        android:hardwareAccelerated="true"
+        android:usesCleartextTraffic="true">
+
+        <activity
+            android:name=".KioskActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:screenOrientation="nosensor"
+            android:configChanges="orientation|screenSize|keyboardHidden|uiMode"
+            android:theme="@android:style/Theme.NoTitleBar.Fullscreen">
+
+            <!-- Normal launcher entry, so it can be started by hand. -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- HOME is the point: Android starts the home activity at boot and
+                 returns to it whenever an app exits. This is what makes the
+                 dashboard survive a power cut without anything else running. -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.HOME" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <service android:name=".OverlayService" android:exported="false" />
+    </application>
+</manifest>

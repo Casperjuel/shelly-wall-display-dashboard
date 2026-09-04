@@ -22,3 +22,18 @@ src/generated/
 dashboards/generated/
 config/packages/
 public/rooms.json
+
+# Secrets: HA long-lived token, and config backups containing
+# credentials. This repo is public.
+.env
+.env.*
+!.env.example
+ha-config-backup-*.tgz
+ha-config-backup-*
+
+# Third-party APK, not ours to redistribute
+vendor/
+
+# Android kiosk build output
+android/build/
+panels.yaml

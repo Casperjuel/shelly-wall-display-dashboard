@@ -221,6 +221,13 @@ export function mediaTile(ctx: Ctx, entity: string, key: string): Tile {
   // Home Assistant's media browser supplies the covers, so start from the
   // manifest's favourites and upgrade in place once the browse returns.
   const favRow = el('div', 'fav-row scroll');
+  // Playlists are Sonos favourites, selected with media_player.select_source.
+  // Not every media_player supports that — the Wall Display's own speaker does
+  // not, and pressing a cover there fails silently in Home Assistant with
+  // "does not support action media_player.select_source". Say so instead.
+  const favNote = el('div', 'fav-note');
+  text(favNote, 'Denne højttaler understøtter ikke playlister');
+  cls(favNote, 'hidden', true);
 
   const renderFavs = (list: Favourite[]) => {
     favRow.textContent = '';
@@ -265,7 +272,7 @@ export function mediaTile(ctx: Ctx, entity: string, key: string): Tile {
   });
 
   const auraEl = el('div', 'media-aura');
-  root.append(auraEl, nowPlaying, transport, volRow, favRow);
+  root.append(auraEl, nowPlaying, transport, volRow, favRow, favNote);
 
   bindPress(bPlay, () => ctx.actions.playPause(entity), { immediate: true });
   bindPress(bPrev, () => ctx.actions.prev(entity));
@@ -289,13 +296,37 @@ export function mediaTile(ctx: Ctx, entity: string, key: string): Tile {
     // Sonos reports `idle` when it has nothing queued, and `standby` when the
     // speaker is asleep. The mock only ever produced playing/paused, so these
     // rendered as a bare em-dash until a real speaker was connected.
-    const idle = !st || ['unavailable', 'off', 'idle', 'standby', 'unknown'].includes(st.state);
+    // Three situations that used to look identical on the glass:
+      //   missing  — not in Home Assistant at all. Either the integration is
+      //              not set up, or rooms.yaml names the entity wrongly, and
+      //              nothing pressed here will ever do anything.
+      //   offline  — the entity exists but the speaker is unreachable.
+      //   idle     — connected and fine, just nothing queued.
+      // The difference is "wait for it" versus "go fix Home Assistant".
+      const missing = !st;
+      const offline = st?.state === 'unavailable';
+      const idle = missing || offline || ['off', 'idle', 'standby', 'unknown'].includes(st!.state);
     const muted = ctx.store.attr<boolean>(entity, 'is_volume_muted', false);
     const v = ctx.actions.volumePct(entity);
 
     const title = ctx.store.attr<string>(entity, 'media_title', '');
-    text(npTitle, title || (idle ? 'Intet afspilles' : 'Afspiller'));
-    text(npArtist, ctx.store.attr<string>(entity, 'media_artist', ''));
+    text(npTitle, title
+        || (missing ? 'Ingen højttaler'
+          : offline ? 'Højttaler offline'
+          : idle ? 'Intet afspilles'
+          : 'Afspiller'));
+      cls(root, 'nolink', missing || offline);
+
+      // Only offer playlists when the speaker can actually switch source.
+      // source_list arrives with the entity's state, so this settles as soon as
+      // the first push lands rather than after a failed press.
+      const sources = ctx.store.attr<string[]>(entity, 'source_list', []);
+      const canSource = Array.isArray(sources) && sources.length > 0;
+      cls(favRow, 'hidden', !canSource);
+      cls(favNote, 'hidden', canSource || missing || offline);
+    text(npArtist, missing ? 'Tilføj den i Home Assistant'
+        : offline ? 'Kan ikke nås'
+        : ctx.store.attr<string>(entity, 'media_artist', ''));
     bPlay.innerHTML = icon(playing ? 'pause' : 'play', 30, true);
     volIc.innerHTML = icon(muted ? 'mute' : 'volume', 20);
     text(volVal, muted ? '×' : String(v));

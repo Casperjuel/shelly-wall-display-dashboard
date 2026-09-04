@@ -71,6 +71,22 @@ export class Store {
 
   isPending(id: EntityId): boolean { return this.guess.has(id); }
 
+  /**
+   * Every entity currently known, optionally filtered by domain.
+   *
+   * `subscribe_entities` is sent without an entity_id filter, so the store holds
+   * the whole house — which is what lets a panel discover speakers it was never
+   * configured with. rooms.yaml pins one speaker per room; Sonos grouping is a
+   * runtime fact and has to be read from the live state instead.
+   */
+  ids(domain?: string): EntityId[] {
+    const out: EntityId[] = [];
+    for (const id of this.truth.keys()) {
+      if (!domain || id.startsWith(domain + '.')) out.push(id);
+    }
+    return out;
+  }
+
   attr<T = any>(id: EntityId, key: string, fallback?: T): T {
     const v = this.get(id)?.attributes?.[key];
     return (v === undefined ? fallback : v) as T;

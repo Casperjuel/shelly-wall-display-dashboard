@@ -302,7 +302,16 @@ Settings. Nothing about timing is documented; tapping about once a second
 worked. Disable the screensaver first, or it can bounce you back to the home
 screen mid-sequence.
 
-Then enable ADB over network in Developer options, and from your machine:
+The tap sequence is all that is needed — it starts `adbd` on the network by
+itself. There is no "ADB over network" toggle in Android's Developer options on
+this build, and Android's developer mode (tapping *Build number*) is a different
+setting that does **not** open the port. Verified the hard way: after a reboot,
+enabling Android developer options changed nothing, while the tap sequence in
+Shelly's own `Settings → About Device` was what had opened 5555 originally.
+
+Note it does not survive a reboot — redo the tap sequence each time.
+
+From your machine:
 
 ```bash
 adb connect <panel-ip>:5555
@@ -325,6 +334,56 @@ adb install -g some.apk
 > ```bash
 > curl -X POST 'http://<panel>:8080/settings' -d '{"adbWifiEnabled":false}'
 > ```
+
+### 4b. Replacing the Shelly UI entirely
+
+The stock Shelly app cannot display an arbitrary web page — `Ui.ListAvailable`
+returns the complete set of UI capabilities and there is no URL anywhere in it.
+So the dashboard needs a launcher. ShellyElevate is the community option; this
+repo ships a 20 KB alternative in `android/`, for one reason: **it declares
+itself as `CATEGORY_HOME`**. An app that is not the launcher sits dormant after
+a reboot, and something has to start it — which is exactly how a panel ends up
+showing the stock UI with no way back.
+
+```bash
+android/build.sh                     # aapt2 + javac + d8 + apksigner, no Gradle
+./tools/panelctl.sh provision kokken
+```
+
+`panelctl` is idempotent and is meant to be re-run: after a firmware update,
+after a factory reset, after adb drops on reboot.
+
+| | |
+| --- | --- |
+| `status` | which panels are up, what they run, adb state |
+| `provision <room>` / `all` | install, permissions, URL, set as HOME |
+| `url <room>` | re-point a panel without reinstalling |
+| `restart`, `logcat`, `shot` | day-to-day |
+
+Panel addresses live in `panels.yaml` (gitignored; copy `panels.example.yaml`),
+the Home Assistant URL and token in `.env` (copy `.env.example`). Nothing
+secret is in the scripts, so the toolkit is safe to share.
+
+**Two permissions cannot be granted by the app itself** on API 23+, so
+`provision` does them over adb:
+
+```bash
+appops set dk.hjem.kiosk SYSTEM_ALERT_WINDOW allow   # the floating "Hjem" button
+appops set dk.hjem.kiosk WRITE_SETTINGS allow        # screen brightness
+```
+
+**The floating button is not decoration.** This panel has no navigation bar, and
+the stock Shelly overlay — the logo and back arrow — is the only Back it has.
+Hiding that overlay to get a clean dashboard turns every other app into a dead
+end reachable only over adb. The kiosk puts up its own "Hjem" button whenever it
+loses focus, and removes it when the dashboard is back, so leaving is always
+recoverable.
+
+**One APK, nine rooms.** The room is passed at provision time, not compiled in:
+
+```bash
+am start -n dk.hjem.kiosk/.KioskActivity -e url "http://<ha>/local/hjem/index.html?room=kokken"
+```
 
 ### 5. Things that cost hours
 

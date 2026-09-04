@@ -116,11 +116,18 @@ export interface ThemeController {
   current(): ThemeName;
   stop(): void;
   set(t: ThemeName | 'auto'): void;
+  /** Override the room's configured accent for this panel. */
+  setAccent(hex: string): void;
+  accent(): string;
   /** Fires whenever day/night flips, so element-scoped accents can be redone. */
   onChange(cb: (t: ThemeName) => void): () => void;
 }
 
 export function startTheme(cfg: ThemeCfg, store: Store, accentHex: string): ThemeController {
+  // Mutable, because a panel can be given its own accent at runtime. The room's
+  // colour from rooms.yaml is the default, not a fixed property: the same
+  // dashboard is on nine walls and someone will want the kitchen green.
+  let accent = accentHex;
   let manual: ThemeName | null = null;
   let applied: ThemeName | null = null;
   let fadeTimer: any = null;
@@ -141,7 +148,7 @@ export function startTheme(cfg: ThemeCfg, store: Store, accentHex: string): Them
     }
 
     root.dataset.theme = t;
-    applyAccent(accentHex, t);
+    applyAccent(accent, t);
     applied = t;
 
     const meta = document.querySelector('meta[name="theme-color"]');
@@ -168,5 +175,13 @@ export function startTheme(cfg: ThemeCfg, store: Store, accentHex: string): Them
       evaluate(true);
     },
     onChange(cb) { listeners.add(cb); return () => listeners.delete(cb); },
+    setAccent(hex) {
+      accent = hex;
+      applyAccent(accent, applied ?? 'dark');
+      // Element-scoped accents (scene tiles, the mood wash) are derived at
+      // render time from the same ramp, so tell them to redo it.
+      listeners.forEach((cb) => cb(applied ?? 'dark'));
+    },
+    accent: () => accent,
   };
 }

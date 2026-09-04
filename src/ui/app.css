@@ -401,3 +401,166 @@
   padding: 14px; border-radius: var(--r-md);
   background: var(--lys); color: #201800; font-weight: 700;
 }
+
+/* ── Panel settings ─────────────────────────────────────────────────────────
+   Replaces what the stock Shelly UI provided, so the panel never has to be
+   handed back to it. Sliders are native <input type=range>: the browser's own
+   drag handling is smoother than anything we'd build from pointer events, and
+   the fill is a single background-image on the track — one composited paint,
+   no layout, which is what keeps dragging at frame rate on an A7. */
+.set-wrap {
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 2px 0 4px;
+}
+
+.set-card {
+  --fill: 50%;
+  padding: 12px 14px 14px; border-radius: var(--r-lg);
+  background: var(--card-grad); border: 1px solid var(--line-soft);
+  contain: layout style paint;
+}
+.set-card.disabled { opacity: .45; }
+
+.set-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.set-ic { display: flex; color: var(--fg-faint); }
+.set-label { font-size: 13px; font-weight: 600; color: var(--fg-dim); flex: 1; }
+.set-val { font-size: 15px; font-weight: 600; color: var(--fg); }
+
+/* Track height is deliberately large: this is a 4" panel operated with a
+   thumb, and the whole point of the project is that touch never misses. */
+.set-range {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 34px; margin: 0;
+  background: transparent; outline: none; display: block;
+}
+.set-range::-webkit-slider-runnable-track {
+  height: 34px; border-radius: var(--r-md);
+  background:
+    linear-gradient(var(--accent-soft), var(--accent-soft)) 0 / var(--fill) 100% no-repeat,
+    var(--surface-3);
+  border: 1px solid var(--line-soft);
+}
+.set-range::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 26px; height: 26px; margin-top: 4px;
+  border-radius: 50%;
+  background: var(--fg); border: 3px solid var(--surface-1);
+  box-shadow: 0 1px 3px rgba(0,0,0,.4);
+}
+.set-range:disabled::-webkit-slider-thumb { background: var(--fg-faint); }
+
+.set-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+}
+.set-btn {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 6px; min-height: var(--touch);
+  padding: 12px 8px; border-radius: var(--r-md);
+  background: var(--card-grad); border: 1px solid var(--line-soft);
+  color: var(--fg-dim); font-size: 12px; font-weight: 600;
+  transition: transform var(--t-tap) var(--ease), border-color var(--t-move) var(--ease);
+}
+.set-btn.down { transform: scale(.97); border-color: var(--accent-line); }
+.set-btn.disabled { opacity: .4; }
+.set-btn-ic { display: flex; color: var(--fg-faint); }
+
+.set-info {
+  padding: 10px 14px; border-radius: var(--r-lg);
+  background: var(--surface-2); border: 1px solid var(--line-soft);
+  display: flex; flex-direction: column; gap: 6px;
+}
+.set-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.set-row-k { font-size: 12px; color: var(--fg-faint); }
+.set-row-v { font-size: 12px; font-weight: 600; color: var(--fg-dim); }
+.set-row-v.bad { color: var(--danger); }
+
+.set-note { font-size: 11px; line-height: 1.4; color: var(--fg-faint); padding: 0 4px; }
+
+/* An entity that is missing from Home Assistant, or unreachable, is not the
+   same as one that is simply idle — the controls cannot work, so they should
+   not invite a press. */
+.tile.nolink .np-controls, .tile.nolink .vol { opacity: .35; pointer-events: none; }
+.tile.nolink .home-np-artist, .tile.nolink .np-artist { color: var(--danger); }
+
+.fav-note {
+  font-size: 12px; color: var(--fg-faint);
+  padding: 10px 4px 2px; text-align: center;
+}
+.hidden { display: none !important; }
+
+/* ── speaker picker ─────────────────────────────────────────────────────────
+   Only shown when there is more than one Sonos to choose between. */
+.spk-row {
+  display: flex; gap: 6px; overflow-x: auto; padding: 0 0 8px;
+  scrollbar-width: none;
+}
+.spk-row::-webkit-scrollbar { display: none; }
+.spk {
+  display: flex; align-items: stretch; flex: 0 0 auto;
+  border-radius: var(--r-md);
+  background: var(--surface-2); border: 1px solid var(--line-soft);
+  overflow: hidden;
+}
+.spk.active { border-color: var(--accent-line); background: var(--musik-dim); }
+.spk.grouped { border-color: var(--musik); }
+.spk-pick {
+  display: flex; align-items: center; gap: 7px;
+  padding: 9px 11px; color: var(--fg-dim);
+  font-size: 12px; font-weight: 600; white-space: nowrap;
+  transition: transform var(--t-tap) var(--ease);
+}
+.spk.active .spk-pick { color: var(--fg); }
+.spk-pick.down { transform: scale(.97); }
+.spk-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--fg-faint); flex: 0 0 auto;
+}
+.spk-dot.playing { background: var(--musik); }
+.spk-badge {
+  display: flex; align-items: center; justify-content: center;
+  padding: 0 9px; color: var(--fg-faint);
+  border-left: 1px solid var(--line-soft);
+  transition: transform var(--t-tap) var(--ease), color var(--t-move) var(--ease);
+}
+.spk.grouped .spk-badge { color: var(--musik); }
+.spk-badge.down { transform: scale(.92); }
+
+/* ── accent picker ──────────────────────────────────────────────────────────
+   The whole palette derives from a single hex, so this is one row of swatches
+   rather than a settings screen. */
+.set-swatches { display: flex; gap: 8px; flex-wrap: wrap; }
+.set-swatch {
+  width: 38px; height: 38px; border-radius: 50%;
+  border: 2px solid transparent;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.12);
+  transition: transform var(--t-tap) var(--ease), border-color var(--t-move) var(--ease);
+}
+.set-swatch.down { transform: scale(.9); }
+.set-swatch.on { border-color: var(--fg); }
+/* "Rum" — follow whatever rooms.yaml configured for this room. */
+.set-swatch.auto {
+  background: linear-gradient(135deg, var(--accent) 0 50%, var(--surface-3) 50% 100%);
+}
+
+/* ── now playing: the record ────────────────────────────────────────────────
+   A slowly turning cover reads as "playing" from across a room in a way a small
+   pause glyph does not. transform composites on the GPU, so this costs no
+   layout and no repaint — the one kind of continuous animation this hardware
+   can afford. */
+@keyframes hjem-spin { to { transform: rotate(360deg); } }
+
+.home-np-art, .np-art {
+  transition: border-radius var(--t-move) var(--ease);
+  will-change: transform;
+}
+.home-np.playing .home-np-art,
+.tile.playing .np-art {
+  border-radius: 50%;
+  animation: hjem-spin 14s linear infinite;
+  box-shadow: 0 2px 12px rgba(0,0,0,.45), inset 0 0 0 1px rgba(0,0,0,.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-np.playing .home-np-art,
+  .tile.playing .np-art { animation: none; }
+}

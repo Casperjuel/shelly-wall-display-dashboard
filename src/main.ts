@@ -16,6 +16,20 @@ import { setBusRoom, emit } from './ui/bus';
 import { startTheme } from './ui/theme';
 import { createMoodWash } from './ui/moodwash';
 
+/**
+ * A panel may be given its own accent, chosen on its Panel tab and stored on the
+ * device. rooms.yaml's colour is the default rather than a fixed property — the
+ * same dashboard runs on nine walls and taste is per-wall.
+ */
+function savedAccent(): string | null {
+  try {
+    const v = localStorage.getItem('hjem.accent');
+    return v && /^#[0-9a-f]{6}$/i.test(v) ? v : null;
+  } catch {
+    return null; // storage disabled or unavailable; use the room's colour
+  }
+}
+
 const LS_TOKEN = 'hjem.token';
 const LS_URL = 'hjem.url';
 
@@ -142,7 +156,7 @@ function start(tok: string, url: string) {
 
   // Accent + day/night. Started before the view is built so the first paint is
   // already in the right theme — no white flash on a bedroom panel at 3 a.m.
-  const theme = startTheme(CONFIG.theme, store, room!.accent);
+  const theme = startTheme(CONFIG.theme, store, savedAccent() ?? room!.accent);
   // ?theme=light|dark pins the theme — used by the debug harness and handy when
   // checking a panel's daytime look at night.
   const forced = qs.get('theme');

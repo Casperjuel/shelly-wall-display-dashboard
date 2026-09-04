@@ -97,6 +97,26 @@ export class Actions {
     this.fire('media_player', 'volume_mute', entity, { is_volume_muted: !muted });
   }
 
+  /**
+   * Sonos grouping. `group_members` lists the entity_ids playing together, with
+   * the coordinator first; join adds speakers to that group, unjoin removes one.
+   * No optimistic guess here — grouping changes several entities at once and a
+   * wrong prediction would show two speakers as joined that are not.
+   */
+  joinSpeakers(coordinator: string, members: string[]) {
+    this.fire('media_player', 'join', coordinator, { group_members: members });
+  }
+
+  unjoinSpeaker(entity: string) {
+    this.fire('media_player', 'unjoin', entity);
+  }
+
+  /** The speakers playing together with this one, coordinator first. */
+  groupOf(entity: string): string[] {
+    const g = this.store.get(entity)?.attributes?.group_members;
+    return Array.isArray(g) ? (g as string[]) : [];
+  }
+
   selectSource(entity: string, source: string) {
     this.store.predict(entity, 'playing', { source });
     this.fire('media_player', 'select_source', entity, { source });
