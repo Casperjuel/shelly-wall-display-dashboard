@@ -202,6 +202,46 @@ const http = createServer((req, res) => {
     req.on('close', () => { reloadClients.delete(send); clearInterval(ka); });
     return;
   }
+  // ── failure injection ────────────────────────────────────────────────────
+  // A wall panel runs for months. It will meet every one of these, and none of
+  // them are reproducible by hand at a useful cadence.
+  if (url.pathname === '/__kill') {
+    // HA restarts: every socket closes, then the server comes back.
+    let n = 0;
+    for (const c of clients) { try { c.ws.close(); n++; } catch {} }
+    res.writeHead(200, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ closed: n }));
+    return;
+  }
+  if (url.pathname === '/__auth') {
+    // Token revoked or expired: HA answers auth with auth_invalid.
+    AUTH_OK = url.searchParams.get('ok') !== 'false';
+    res.writeHead(200, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ auth_ok: AUTH_OK }));
+    return;
+  }
+  if (url.pathname === '/__deaf') {
+    // Half-open socket: the connection looks alive but nothing arrives. This
+    // is what a Wi-Fi roam or an AP reboot actually looks like to the panel.
+    DEAF = url.searchParams.get('on') !== 'false';
+    res.writeHead(200, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ deaf: DEAF }));
+    return;
+  }
+  if (url.pathname === '/__unavailable') {
+    // A device drops off: HA keeps the entity but reports `unavailable`.
+    const e = url.searchParams.get('e');
+    const on = url.searchParams.get('on') !== 'false';
+    const st = states.get(e);
+    if (st) {
+      if (on) { st._was = st._was ?? st.s; st.s = 'unavailable'; }
+      else if (st._was) { st.s = st._was; delete st._was; }
+      broadcast(e);
+    }
+    res.writeHead(200, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ entity: e, state: st?.s ?? null }));
+    return;
+  }
   if (url.pathname === '/__state') {
     res.writeHead(200, { 'content-type': 'application/json' });
     res.end(JSON.stringify(Object.fromEntries(states)));
@@ -239,6 +279,8 @@ const http = createServer((req, res) => {
 //   curl '/__show?p=anim.html'   → the panel shows the animation benchmark
 //   curl '/__show?p='            → back to the dashboard
 let SHOW = '';
+let AUTH_OK = true;   // /__auth?ok=false makes the server reject credentials
+let DEAF = false;     // /__deaf     stops the server answering pings
 // Room override for the dev channel, so a wall-mounted panel can be pointed at
 // a different room without re-typing its url on a 4" touchscreen.
 let SHOW_ROOM = '';
@@ -270,6 +312,7 @@ const wss = new WebSocketServer({ server: http, path: '/api/websocket' });
 const clients = new Set();
 
 function broadcast(id) {
+  if (DEAF) return;
   const st = states.get(id);
   if (!st) return;
   const msg = JSON.stringify({
@@ -293,14 +336,21 @@ wss.on('connection', (ws) => {
     let m; try { m = JSON.parse(buf.toString()); } catch { return; }
 
     if (m.type === 'auth') {
-      if (m.access_token !== TOKEN) { ws.send(JSON.stringify({ type: 'auth_invalid', message: 'bad token' })); return; }
+      if (!AUTH_OK || m.access_token !== TOKEN) {
+        ws.send(JSON.stringify({ type: 'auth_invalid', message: 'bad token' }));
+        return;
+      }
       c.authed = true;
       ws.send(JSON.stringify({ type: 'auth_ok', ha_version: '2026.8.0-mock' }));
       return;
     }
     if (!c.authed) return;
 
-    if (m.type === 'ping') { ws.send(JSON.stringify({ id: m.id, type: 'pong' })); return; }
+    if (m.type === 'ping') {
+      if (DEAF) return;          // socket stays open, pings go unanswered
+      ws.send(JSON.stringify({ id: m.id, type: 'pong' }));
+      return;
+    }
 
     if (m.type === 'subscribe_entities') {
       ws.send(JSON.stringify({ id: m.id, type: 'result', success: true, result: null }));

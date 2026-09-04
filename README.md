@@ -562,6 +562,40 @@ Every interactive control has a stable `data-key` (`stue.lys.0.toggle`,
 ## Tests
 
 ```bash
+npm run mock &        # required by all three suites
+npm test              # unit + UI + resilience
+```
+
+| Suite | What it covers |
+|---|---|
+| `test:unit` | store semantics and HA protocol conformance (17) |
+| `test:ui` | real Chrome at real viewports — layout, budgets, gradients, themes (37) |
+| `test:resilience` | the failure modes a wall panel meets over months (13) |
+
+### Resilience
+
+`tools/resilience.mjs` injects real failures into the mock and asserts the
+panel recovers:
+
+| Failure | Injected with | Behaviour |
+|---|---|---|
+| Home Assistant restarts | `/__kill` | reconnects in <1 s, does not rebuild the DOM, state stays live |
+| Wi-Fi drops (half-open socket) | `/__deaf?on=true` | heartbeat catches it in ~57 s |
+| …and someone taps during it | — | **~4.5 s**, because an unacknowledged tap is stronger evidence than a missed ping |
+| A bulb leaves the mesh | `/__unavailable?e=…` | tile greys out and reads *utilgængelig* |
+| Token revoked | `/__auth?ok=false` | stops retrying, shows the offline veil |
+
+The half-open case is the one worth understanding. A silent socket looks alive,
+so the heartbeat needs ~a minute to be sure — acceptable when the room is empty,
+useless when somebody is standing at the panel wondering why the light did not
+come on. So a prediction that expires unconfirmed triggers an immediate probe:
+the user's own failed tap is the fastest possible signal that the link is dead.
+
+<details>
+<summary>Older notes on the three suites</summary>
+
+
+```bash
 npm run mock &        # required by both suites
 node tools/selftest.mjs   # store semantics + HA protocol conformance  (17)
 node tools/uitest.mjs     # real Chrome, real viewports, real taps     (30)
@@ -577,6 +611,8 @@ optimistic paint happens synchronously, theme follows the sun, and all nine room
 accents are distinct.
 
 ---
+
+</details>
 
 ## Getting a panel onto the dashboard
 

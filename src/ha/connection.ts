@@ -175,6 +175,23 @@ export class HaConnection {
     }, 20000);
   }
 
+  /**
+   * Probe the link now rather than waiting for the next heartbeat.
+   *
+   * Called when something the user did went unanswered. A live connection
+   * answers a ping in single-digit milliseconds on a LAN, so a short timeout is
+   * safe here — and if it lapses we drop the socket, which starts the normal
+   * reconnect path and puts the offline veil up straight away.
+   */
+  checkAlive(timeoutMs = 2000) {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+    let answered = false;
+    this.sendWithId({ type: 'ping' }).then(() => { answered = true; }).catch(() => {});
+    setTimeout(() => {
+      if (!answered && this.ws?.readyState === WebSocket.OPEN) this.ws.close();
+    }, timeoutMs);
+  }
+
   // ── public API ────────────────────────────────────────────────────────────
   onEntities(l: Listener) { this.entityListeners.add(l); return () => this.entityListeners.delete(l); }
   onState(l: StateListener) { this.stateListeners.add(l); l(this.state); return () => this.stateListeners.delete(l); }

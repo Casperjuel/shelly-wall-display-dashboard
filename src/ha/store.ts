@@ -40,6 +40,17 @@ export class Store {
   /** How long an unconfirmed optimistic value survives. */
   static GRACE_MS = 2500;
 
+  /**
+   * Called when a prediction expires with no confirmation from HA.
+   *
+   * This is the strongest evidence available that the connection is dead: the
+   * user touched something, we sent it, and nothing came back. The heartbeat
+   * alone takes up to a minute to notice a half-open socket — acceptable when
+   * the room is empty, useless when somebody is standing at the panel wondering
+   * why the light did not come on.
+   */
+  onUnconfirmed: ((entity: string) => void) | null = null;
+
   // ── reads ─────────────────────────────────────────────────────────────────
   get(id: EntityId): HaState | undefined {
     const t = this.truth.get(id);
@@ -175,6 +186,7 @@ export class Store {
           this.guess.delete(id); this.dirty.add(id); changed = true;
           // expired without HA ever confirming — the command was probably lost
           emit({ type: 'settle', entity: id, ms: now - g.at, confirmed: false });
+          this.onUnconfirmed?.(id);
         }
       }
       if (changed) this.flush();

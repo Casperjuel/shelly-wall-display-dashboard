@@ -12,7 +12,11 @@
     "gen": "node tools/generate.mjs",
     "discover": "node tools/discover.mjs",
     "deploy": "node tools/deploy.mjs",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "node tools/selftest.mjs && node tools/uitest.mjs && node tools/resilience.mjs",
+    "test:unit": "node tools/selftest.mjs",
+    "test:ui": "node tools/uitest.mjs",
+    "test:resilience": "node tools/resilience.mjs"
   },
   "devDependencies": {
     "esbuild": "^0.25.0",

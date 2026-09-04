@@ -111,6 +111,9 @@ function start(tok: string, url: string) {
 
 
   conn.onEntities((ev) => store.ingest(ev));
+  // A tap that HA never acknowledged is the earliest reliable sign the link is
+  // dead — check immediately instead of waiting out the heartbeat.
+  store.onUnconfirmed = () => conn.checkAlive();
 
   // Offline veil: shown only after a short delay so a 200 ms Wi-Fi blip during
   // an AP roam doesn't flash a scary overlay across the wall.
