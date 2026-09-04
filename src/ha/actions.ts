@@ -134,6 +134,19 @@ export class Actions {
   setPanelBrightness(pct: number) {
     const level = Math.max(0, Math.min(100, Math.round(pct)));
     emit({ type: 'action', entity: 'panel', service: 'Ui.SetConfig', data: { brightness: level } });
+
+    // The kiosk app's bridge is the only thing that actually moves the
+    // backlight. The Shelly RPC below is same-origin only, and the dashboard is
+    // served from Home Assistant — so on a real panel that fetch always failed
+    // silently, and the vageur's night_brightness never reached the hardware.
+    // That is not cosmetic: a wall display left at full brightness all night
+    // runs warm enough to skew its own temperature sensor.
+    const bridge = (window as any).hjem;
+    if (bridge && typeof bridge.setBrightness === 'function') {
+      // Android's scale is 1-255; below ~1% the panel is effectively off.
+      bridge.setBrightness(Math.max(1, Math.round((level / 100) * 255)));
+      return;
+    }
     fetch('/rpc', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
